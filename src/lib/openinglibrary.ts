@@ -124,3 +124,47 @@ export function openingNameFor(library: Library | null, path: string[]): { name:
   }
   return best ? { name: best.name, eco: best.eco } : null;
 }
+
+/** Fewest games a move or reply must have before it counts for a trap. */
+const MIN_TRAP_GAMES = 50;
+
+export type TrapOption = {
+  /** Your move that sets the trap (UCI). */
+  move: string;
+  /** The opponent reply that falls into it (UCI). */
+  reply: string;
+  /** How likely the opponent is to choose that reply, among their replies. */
+  likelihood: number;
+  /** How badly the opponent scores after that reply (1 = they always lose). */
+  potency: number;
+  /** likelihood × potency, as in davidADSP/chess-trap-scorer (MIT). */
+  score: number;
+  games: number;
+};
+
+/**
+ * Traps you can set from this position, scored like davidADSP/chess-trap-scorer (MIT):
+ * the trap score is the likelihood the opponent plays the trap reply, times the potency
+ * (how much they lose after it). Here both come from the 2024 Lichess statistics.
+ */
+export function trapsToSet(library: Library | null, path: string[], mySide: 'w' | 'b'): TrapOption[] {
+  const opponent = mySide === 'w' ? 'b' : 'w';
+  const options: TrapOption[] = [];
+  for (const mine of libraryMoves(library, path)) {
+    if (mine.games < MIN_TRAP_GAMES) continue;
+    const replies = libraryMoves(library, [...path, mine.uci]);
+    const total = replies.reduce((sum, r) => sum + r.games, 0);
+    let best: TrapOption | null = null;
+    for (const reply of replies) {
+      if (reply.games < MIN_TRAP_GAMES || total === 0) continue;
+      const likelihood = reply.games / total;
+      const potency = 1 - libraryScore(reply, opponent);
+      const score = likelihood * potency;
+      if (!best || score > best.score) {
+        best = { move: mine.uci, reply: reply.uci, likelihood, potency, score, games: reply.games };
+      }
+    }
+    if (best) options.push(best);
+  }
+  return options.sort((a, b) => b.score - a.score);
+}

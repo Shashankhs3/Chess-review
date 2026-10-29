@@ -6,6 +6,7 @@ import { OPENING_LINES, type OpeningLine } from '../lib/openingdb';
 import {
   libraryMoves,
   libraryScore,
+  trapsToSet,
   loadLibrary,
   openingNameFor,
   type Library,
@@ -110,6 +111,12 @@ export function OpeningPrep() {
   const yourTurn = started && board.turn() === side && !board.isGameOver();
   const onPreparedLine = path.every((uci, i) => prepared[i] === uci);
   const expectedUci = prepared[path.length];
+
+  // Traps you can set from here, scored as likelihood × potency (method from davidADSP/chess-trap-scorer, MIT).
+  const traps = useMemo(
+    () => (yourTurn ? trapsToSet(library, path, side).slice(0, 3) : []),
+    [library, path, side, yourTurn],
+  );
 
   // ----- The opponent -----
 
@@ -333,6 +340,21 @@ export function OpeningPrep() {
                       {uciToSan(fen, m.uci)} · {m.games} games · {pct(libraryScore(m, side))} for you
                     </span>
                   ))}
+                </div>
+              )}
+              {yourTurn && traps.length > 0 && (
+                <div className="book-list">
+                  <span className="hint small">Traps to set here (likelihood × potency):</span>
+                  {traps.map((t) => {
+                    const afterMine = new Chess(fen);
+                    playUci(afterMine, t.move);
+                    return (
+                      <span key={`${t.move}-${t.reply}`} className="small">
+                        {uciToSan(fen, t.move)}, then if {uciToSan(afterMine.fen(), t.reply)} ({pct(t.likelihood)} of
+                        their replies): they score {pct(1 - t.potency)} · trap score {pct(t.score)}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
               {feedback && <p className="feedback">{feedback}</p>}
