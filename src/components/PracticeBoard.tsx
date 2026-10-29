@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
+import { hintStyles } from '../lib/dots';
 import { Chess, type Color, type Square } from 'chess.js';
 import { Chessboard, type ChessboardOptions, type PositionDataType } from 'react-chessboard';
 import { playSound, soundForSan } from '../lib/sound';
@@ -80,6 +81,8 @@ export function PracticeBoard() {
   const [palette, setPalette] = useState<string | null>(null);
   const [eraser, setEraser] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Rules mode: the square of the piece picked up by a click; its moves are shown as dots.
+  const [picked, setPicked] = useState<string | null>(null);
 
   // Rules mode state: the current FEN and the FENs before each move, for undo.
   const [rulesFen, setRulesFen] = useState(START_FEN);
@@ -115,6 +118,7 @@ export function PracticeBoard() {
     }
     setError(null);
     setRulesFen(fen);
+    setPicked(null);
     setHistory([]);
     setMode('rules');
   }
@@ -123,6 +127,7 @@ export function PracticeBoard() {
     setBoard(boardFromFen(rulesFen));
     setSideToMove(rulesGame.turn());
     setMode('free');
+    setPicked(null);
     setError(null);
   }
 
@@ -166,8 +171,19 @@ export function PracticeBoard() {
     return true;
   };
 
+  // Dots show where the picked piece can move in rules mode.
+  const ruleStyles = useMemo(() => {
+    const styles: Record<string, CSSProperties> = {};
+    if (picked) styles[picked] = { backgroundColor: 'rgba(120, 170, 255, 0.55)' };
+    for (const [target, hint] of Object.entries(hintStyles(rulesFen, picked))) {
+      styles[target] = { ...styles[target], ...hint };
+    }
+    return styles;
+  }, [rulesFen, picked]);
+
   const options: ChessboardOptions = {
     position: mode === 'free' ? positionOf(board) : rulesFen,
+    squareStyles: mode === 'rules' ? ruleStyles : {},
     boardOrientation: 'white',
     allowDragging: true,
     animationDurationInMs: 120,
@@ -176,7 +192,19 @@ export function PracticeBoard() {
     clearArrowsOnPositionChange: true,
     onPieceDrop: mode === 'free' ? freeDrop : rulesDrop,
     onSquareClick: ({ square }) => {
-      if (mode !== 'free') return;
+      if (mode === 'rules') {
+        // Click a piece to see its moves, then click a dot to play it.
+        if (picked === square) {
+          setPicked(null);
+          return;
+        }
+        if (picked && rulesDrop({ sourceSquare: picked, targetSquare: square })) {
+          setPicked(null);
+          return;
+        }
+        setPicked(rulesGame.get(square as Square) ? square : null);
+        return;
+      }
       if (eraser) {
         setBoard((b) => {
           const next = { ...b };

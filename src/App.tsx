@@ -19,6 +19,7 @@ import {
   type GameAnalysis,
 } from './lib/analysis';
 import { uciMove } from './lib/board';
+import { hintStyles } from './lib/dots';
 import { coachMove, formatSanLine, type MoveCoaching } from './lib/coach';
 import { fetchLastGames, fetchRecentGames, formatTimeControl, type ChessComGame } from './lib/chesscom';
 import {
@@ -372,8 +373,12 @@ export default function App() {
       styles[lastMove.uci.slice(2, 4)] = highlight;
     }
     if (pickedSquare) styles[pickedSquare] = { backgroundColor: 'rgba(120, 170, 255, 0.55)' };
+    // Dots and rings on the squares the picked piece can move to.
+    for (const [target, hint] of Object.entries(hintStyles(fen, pickedSquare))) {
+      styles[target] = { ...styles[target], ...hint };
+    }
     return styles;
-  }, [lastMove, pickedSquare]);
+  }, [fen, lastMove, pickedSquare]);
 
   const boardOptions: ChessboardOptions = {
     position: fen,
@@ -399,9 +404,9 @@ export default function App() {
         setPickedSquare(null);
         return;
       }
+      // Any piece can be picked up to see where it can go; the move itself is checked on play.
       const piece = new Chess(fen).get(square as Square);
-      const sideToMove = fen.split(' ')[1];
-      setPickedSquare(piece && piece.color === sideToMove ? square : null);
+      setPickedSquare(piece ? square : null);
     },
   };
 
