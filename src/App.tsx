@@ -3,6 +3,7 @@ import { Chess, type Square } from 'chess.js';
 import { Chessboard, type Arrow, type ChessboardOptions } from 'react-chessboard';
 import { EvalGraph } from './components/EvalGraph';
 import { PracticeBoard } from './components/PracticeBoard';
+import { EngineArrows } from './components/EngineArrows';
 import { playSound, setSoundEnabled, soundEnabled, soundForSan } from './lib/sound';
 import { LivePanel } from './components/LivePanel';
 import {
@@ -377,7 +378,6 @@ export default function App() {
   const boardOptions: ChessboardOptions = {
     position: fen,
     boardOrientation: userColor === 'b' ? 'black' : 'white',
-    arrows,
     squareStyles,
     allowDragging: true,
     // Hand-drawn arrows are cleared whenever the position changes, so they never linger.
@@ -946,6 +946,7 @@ export default function App() {
                 </div>
                 <div className="board-square" style={{ width: boardPx, height: boardPx }}>
                   <Chessboard options={boardOptions} />
+                  <EngineArrows arrows={arrows} flipped={userColor === 'b'} />
                 </div>
               </div>
 
