@@ -1,0 +1,27 @@
+:root {
+  --bg: #161512;
+  --panel: #262421;
+  --panel-2: #302e2b;
+  --text: #bababa;
+  --muted: #8b8985;
+  --accent: #81b64c;
+  --error: #fa412d;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
