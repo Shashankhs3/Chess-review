@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Chess, type Color, type Square } from 'chess.js';
 import { Chessboard, type ChessboardOptions } from 'react-chessboard';
 import { uciToSan } from '../lib/analysis';
 import { OPENING_LINES, type OpeningLine } from '../lib/openingdb';
+import type { LiveLine } from '../lib/engine';
 import {
   libraryMoves,
   libraryScore,
@@ -14,11 +15,17 @@ import {
 } from '../lib/openinglibrary';
 import { BOARD_COLORS } from '../lib/styles';
 import { playSound, soundForSan } from '../lib/sound';
+import { EngineArrows, type OverlayArrow } from './EngineArrows';
+import { LivePanel } from './LivePanel';
 
 /**
  * Opening preparation. Choose a side and an opening; the opponent follows the prepared line
  * and then the most common move in the statistics. Each of your moves is checked against
  * the statistics: book, playable, rare, or a mistake, with its score for you.
+ *
+ * Every position is kept in a timeline, so you can step back and forward (Start, Back, Next,
+ * End) or click any move in the notation. Playing a different move from an earlier position
+ * starts a new continuation. Lines can be saved and loaded on this device.
  *
  * Statistics: Chess Multiverse Opening Intelligence Database (20M Lichess games, 2024), CC BY-SA 4.0.
  */
@@ -32,8 +39,46 @@ const TRAP_SCORE = 0.6;
 const TRAP_MIN_GAMES = 50;
 /** A move scoring below this for you is called a mistake. */
 const MISTAKE_SCORE = 0.45;
+const SAVED_KEY = 'chess-review.prep-lines.v1';
 
 const pct = (value: number) => `${Math.round(value * 100)}%`;
+
+/** One position on the timeline, and the move that led to it. */
+type Entry = {
+  fen: string;
+  /** UCI moves from the start to this position. */
+  path: string[];
+  /** SAN of the move that led here (null for the start position). */
+  san: string | null;
+  /** What we said about the move that led here. */
+  note: string | null;
+  /** A trap warning raised by the opponent's reply that led here. */
+  trap: string | null;
+  /** Set when the statistics have run out: you then play both sides yourself. */
+  open?: boolean;
+};
+
+/** A line you prepared, kept on this device. */
+type SavedLine = { id: string; name: string; side: Color; path: string[] };
+
+const startEntry = (): Entry => ({ fen: START_FEN, path: [], san: null, note: null, trap: null });
+
+function loadSaved(): SavedLine[] {
+  try {
+    const raw = localStorage.getItem(SAVED_KEY);
+    return raw ? (JSON.parse(raw) as SavedLine[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function storeSaved(lines: SavedLine[]): void {
+  try {
+    localStorage.setItem(SAVED_KEY, JSON.stringify(lines));
+  } catch {
+    // Storage blocked: lines last for this visit only.
+  }
+}
 
 function promotionFor(board: Chess, from: string, to: string): 'q' | undefined {
   const piece = board.get(from as Square);
@@ -46,6 +91,15 @@ function playUci(board: Chess, uci: string): string | null {
     return board.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] }).san;
   } catch {
     return null;
+  }
+}
+
+function isLegal(fen: string, uci: string): boolean {
+  try {
+    new Chess(fen).move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -71,12 +125,18 @@ export function OpeningPrep() {
   const [query, setQuery] = useState('');
   const [opening, setOpening] = useState<OpeningLine | null>(null);
   const [prepared, setPrepared] = useState<string[]>([]);
-  const [fen, setFen] = useState(START_FEN);
-  const [path, setPath] = useState<string[]>([]);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [trap, setTrap] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
+  const [timeline, setTimeline] = useState<Entry[]>([startEntry()]);
+  const [at, setAt] = useState(0);
+  const [saved, setSaved] = useState<SavedLine[]>(() => loadSaved());
+  const [showTraps, setShowTraps] = useState(false);
+  const [live, setLive] = useState<{ fen: string; lines: LiveLine[] }>({ fen: '', lines: [] });
   const botTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The position on the board, and the moves that led to it.
+  const current = timeline[at] ?? timeline[0];
+  const fen = current.fen;
+  const path = current.path;
 
   useEffect(() => {
     let alive = true;
@@ -90,6 +150,8 @@ export function OpeningPrep() {
       if (botTimer.current) clearTimeout(botTimer.current);
     };
   }, []);
+
+  const handleLive = useCallback((lines: LiveLine[], forFen: string) => setLive({ fen: forFen, lines }), []);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -112,27 +174,68 @@ export function OpeningPrep() {
   const onPreparedLine = path.every((uci, i) => prepared[i] === uci);
   const expectedUci = prepared[path.length];
 
+  // The engine's lines only count for the position on the board; older lines are ignored.
+  const liveLines = useMemo(() => (live.fen === fen ? live.lines : []), [live, fen]);
+
   // Traps you can set from here, scored as likelihood × potency (method from davidADSP/chess-trap-scorer, MIT).
   const traps = useMemo(
     () => (yourTurn ? trapsToSet(library, path, side).slice(0, 3) : []),
     [library, path, side, yourTurn],
   );
 
+  // Arrows on your turn: gold for the most played move in the statistics, blue for the engine's
+  // second-best, green for the engine's best. Drawn in that order, so green sits on top.
+  const arrows: OverlayArrow[] = useMemo(() => {
+    const list: OverlayArrow[] = [];
+    // Trap moves first, underneath everything else, when the trap button is on.
+    if (showTraps && yourTurn) {
+      for (const t of traps) {
+        if (isLegal(fen, t.move)) {
+          list.push({ startSquare: t.move.slice(0, 2), endSquare: t.move.slice(2, 4), color: 'rgba(255, 226, 0, 0.95)', width: 0.22 });
+        }
+      }
+    }
+    const mostPlayed = yourTurn ? candidates[0]?.uci : undefined;
+    const second = liveLines[1]?.pv[0];
+    const top = liveLines[0]?.pv[0];
+    if (mostPlayed && isLegal(fen, mostPlayed)) {
+      // Wider than the engine arrows, so it still shows as a gold edge when the engine plays the same move.
+      list.push({
+        startSquare: mostPlayed.slice(0, 2),
+        endSquare: mostPlayed.slice(2, 4),
+        color: 'rgba(245, 190, 60, 0.95)',
+        width: 0.3,
+      });
+    }
+    if (second && isLegal(fen, second)) {
+      list.push({ startSquare: second.slice(0, 2), endSquare: second.slice(2, 4), color: 'rgba(92, 139, 176, 0.85)' });
+    }
+    if (top && isLegal(fen, top)) {
+      list.push({ startSquare: top.slice(0, 2), endSquare: top.slice(2, 4), color: 'rgba(129, 182, 76, 0.9)' });
+    }
+    return list;
+  }, [candidates, fen, liveLines, showTraps, traps, yourTurn]);
+
   // ----- The opponent -----
 
-  /** The opponent's reply: the prepared line first, then the most common move in the statistics. */
-  function scheduleBot(currentFen: string, playedPath: string[], line: string[], mySide: Color) {
+  /**
+   * The opponent's reply, added after `base` (the timeline up to the position they answer).
+   * The prepared line comes first, then the most common move in the statistics.
+   */
+  function scheduleBot(base: Entry[], line: string[], mySide: Color) {
     if (botTimer.current) clearTimeout(botTimer.current);
     botTimer.current = setTimeout(() => {
-      const position = new Chess(currentFen);
+      const last = base[base.length - 1];
+      const position = new Chess(last.fen);
       const opponent: Color = mySide === 'w' ? 'b' : 'w';
       if (position.turn() !== opponent || position.isGameOver()) return;
 
       let uci: string | null = null;
       let san: string | null = null;
       let source = '';
+      let trapText: string | null = null;
 
-      const preparedNext = line[playedPath.length];
+      const preparedNext = line[last.path.length];
       if (preparedNext) {
         san = playUci(position, preparedNext);
         if (san) {
@@ -142,7 +245,7 @@ export function OpeningPrep() {
       }
 
       if (!san) {
-        const common = libraryMoves(library, playedPath)[0];
+        const common = libraryMoves(library, last.path)[0];
         if (common) {
           san = playUci(position, common.uci);
           if (san) {
@@ -150,20 +253,34 @@ export function OpeningPrep() {
             source = 'most common in the statistics';
             const forYou = 1 - libraryScore(common, opponent);
             if (common.games >= TRAP_MIN_GAMES && forYou >= TRAP_SCORE) {
-              setTrap(`Trap ahead: ${san} is common here (${common.games} games) but scores ${pct(forYou)} for you.`);
+              trapText = `Trap ahead: ${san} is common here (${common.games} games) but scores ${pct(forYou)} for you.`;
             }
           }
         }
       }
 
       if (!san || !uci) {
-        setFeedback('No statistics for this position. Play on by your own understanding.');
+        // The statistics have run out here, so the opponent cannot reply. Let you play both sides.
+        setTimeline([
+          ...base.slice(0, -1),
+          {
+            ...last,
+            open: true,
+            note: 'Beyond the statistics: the opponent cannot reply automatically. Play their moves yourself to continue.',
+          },
+        ]);
         return;
       }
       playSound(soundForSan(san));
-      setFen(position.fen());
-      setPath([...playedPath, uci]);
-      setFeedback(`Opponent played ${san} (${source}).`);
+      const entry: Entry = {
+        fen: position.fen(),
+        path: [...last.path, uci],
+        san,
+        note: `Opponent played ${san} (${source}).`,
+        trap: trapText,
+      };
+      setTimeline([...base, entry]);
+      setAt(base.length);
     }, BOT_DELAY_MS);
   }
 
@@ -195,9 +312,11 @@ export function OpeningPrep() {
   }
 
   function playerMove(from: string, to: string): boolean {
-    if (!started || !opening) return false;
+    if (!started) return false;
     const position = new Chess(fen);
-    if (position.turn() !== side) return false;
+    const mover = position.turn();
+    // You move your own side, or both sides once the statistics have run out.
+    if (mover !== side && !current.open) return false;
     let made;
     try {
       made = position.move({ from, to, promotion: promotionFor(position, from, to) });
@@ -206,36 +325,110 @@ export function OpeningPrep() {
     }
     if (botTimer.current) clearTimeout(botTimer.current);
     const uci = `${made.from}${made.to}${made.promotion ?? ''}`;
-    const beforeFen = fen;
-    const beforePath = path;
-    const nextPath = [...path, uci];
+    const entry: Entry = {
+      fen: position.fen(),
+      path: [...path, uci],
+      san: made.san,
+      note:
+        mover === side
+          ? judge(fen, path, uci, made.san, side)
+          : `${made.san} is the opponent's move, played by you.`,
+      trap: null,
+      open: current.open,
+    };
+    // Playing from an earlier position replaces the continuation that followed it.
+    const base = [...timeline.slice(0, at + 1), entry];
+    setTimeline(base);
+    setAt(base.length - 1);
     playSound(soundForSan(made.san));
-    setFen(position.fen());
-    setPath(nextPath);
-    setTrap(null);
-    setFeedback(judge(beforeFen, beforePath, uci, made.san, side));
-    if (!position.isGameOver()) scheduleBot(position.fen(), nextPath, prepared, side);
+    if (!position.isGameOver()) scheduleBot(base, prepared, side);
     return true;
   }
 
-  function startPreparation(line: OpeningLine, chosen: Color) {
+  // ----- Moving through the timeline -----
+
+  function stopBot() {
     if (botTimer.current) clearTimeout(botTimer.current);
+  }
+
+  const goStart = () => {
+    stopBot();
+    setAt(0);
+  };
+  const goBack = () => {
+    stopBot();
+    setAt((i) => Math.max(0, i - 1));
+  };
+  const goNext = () => {
+    stopBot();
+    setAt((i) => Math.min(timeline.length - 1, i + 1));
+  };
+  const goEnd = () => {
+    stopBot();
+    setAt(timeline.length - 1);
+  };
+  const jumpTo = (index: number) => {
+    stopBot();
+    setAt(index);
+  };
+
+  function startPreparation(line: OpeningLine, chosen: Color) {
+    stopBot();
     const uciLine = toUciLine(line.moves);
+    const initial = [startEntry()];
     setOpening(line);
     setSide(chosen);
     setPrepared(uciLine);
-    setFen(START_FEN);
-    setPath([]);
-    setFeedback(null);
-    setTrap(null);
+    setTimeline(initial);
+    setAt(0);
     setStarted(true);
     // White moves first, so if you play Black the opponent opens.
-    if (chosen === 'b') scheduleBot(START_FEN, [], uciLine, chosen);
+    if (chosen === 'b') scheduleBot(initial, uciLine, chosen);
   }
 
   function restartLine() {
     if (!opening) return;
     startPreparation(opening, side);
+  }
+
+  // ----- Saved lines -----
+
+  function saveCurrentLine() {
+    if (path.length === 0) return;
+    const name = currentName ? currentName.name : 'Prepared line';
+    const entry: SavedLine = { id: `${Date.now()}`, name: `${name} · ${path.length} plies`, side, path };
+    const next = [entry, ...saved];
+    setSaved(next);
+    storeSaved(next);
+    setTimeline((t) => t.map((e, i) => (i === at ? { ...e, note: `Saved "${entry.name}".` } : e)));
+  }
+
+  function deleteSaved(id: string) {
+    const next = saved.filter((entry) => entry.id !== id);
+    setSaved(next);
+    storeSaved(next);
+  }
+
+  /** Loads a saved line onto the timeline and continues from its last move. */
+  function loadSavedLine(entry: SavedLine) {
+    stopBot();
+    const position = new Chess(START_FEN);
+    const entries: Entry[] = [startEntry()];
+    for (const uci of entry.path) {
+      const san = playUci(position, uci);
+      if (!san) break;
+      entries.push({ fen: position.fen(), path: [...entries[entries.length - 1].path, uci], san, note: null, trap: null });
+    }
+    entries[entries.length - 1] = { ...entries[entries.length - 1], note: `Loaded "${entry.name}".` };
+    setStarted(true);
+    setOpening(null);
+    setSide(entry.side);
+    setPrepared([]);
+    setTimeline(entries);
+    setAt(entries.length - 1);
+    if (position.turn() !== entry.side && !position.isGameOver()) {
+      scheduleBot(entries, [], entry.side);
+    }
   }
 
   const boardOptions: ChessboardOptions = {
@@ -248,66 +441,39 @@ export function OpeningPrep() {
     onPieceDrop: ({ sourceSquare, targetSquare }) => (targetSquare ? playerMove(sourceSquare, targetSquare) : false),
   };
 
+  /** Move notation: "1. e4 e5 2. Nf3 …", each move clickable. */
+  const notation = timeline.slice(1).map((entry, i) => ({ index: i + 1, san: entry.san ?? '' }));
+
   return (
     <div className="prep">
       <div className="prep-board">
-        <Chessboard options={boardOptions} />
+        <div className="board-wrap">
+          <Chessboard options={boardOptions} />
+          <EngineArrows arrows={arrows} flipped={side === 'b'} />
+        </div>
+        <div className="board-nav" role="group" aria-label="Move navigation">
+          <button onClick={goStart} disabled={at === 0} aria-label="Start">
+            ⏮
+          </button>
+          <button onClick={goBack} disabled={at === 0} aria-label="Back">
+            ◀ Back
+          </button>
+          <span className="hint small">
+            move {Math.ceil(at / 2)} of {Math.ceil((timeline.length - 1) / 2)}
+          </span>
+          <button onClick={goNext} disabled={at >= timeline.length - 1} aria-label="Next">
+            Next ▶
+          </button>
+          <button onClick={goEnd} disabled={at >= timeline.length - 1} aria-label="End">
+            ⏭
+          </button>
+        </div>
       </div>
 
       <aside className="prep-panel">
-        <section className="card">
-          <h3>1. Statistics</h3>
-          {libraryState === 'loading' && <p className="hint small">Loading the opening statistics…</p>}
-          {libraryState === 'missing' && (
-            <p className="error small">The opening statistics file could not be loaded.</p>
-          )}
-          {libraryState === 'ready' && library && (
-            <p className="hint small">
-              {library.records.toLocaleString()} opening lines from 20 million rated Lichess games (2024). Each move
-              shows how many games reached it and how it scored.
-            </p>
-          )}
-          <p className="hint small">
-            Data: Chess Multiverse Opening Intelligence Database, CC BY-SA 4.0. Source on GitHub: chessmultiverse-opening-analytics-2024.
-          </p>
-        </section>
-
-        <section className="card">
-          <h3>2. Your side and opening</h3>
-          <div className="prep-row">
-            <button className={side === 'w' ? 'active' : ''} onClick={() => setSide('w')}>
-              I play White
-            </button>
-            <button className={side === 'b' ? 'active' : ''} onClick={() => setSide('b')}>
-              I play Black
-            </button>
-          </div>
-          <input
-            placeholder="Opening name or ECO, e.g. Sicilian or B20"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search openings"
-          />
-          <div className="prep-list">
-            {matches.map((line) => (
-              <button key={`${line.eco}-${line.name}`} onClick={() => startPreparation(line, side)}>
-                <span className="hint">{line.eco}</span> {line.name}
-              </button>
-            ))}
-          </div>
-          {opening && (
-            <p className="small">
-              Preparing <b>{opening.name}</b> as {side === 'w' ? 'White' : 'Black'}.{' '}
-              <button className="link" onClick={restartLine}>
-                Restart
-              </button>
-            </p>
-          )}
-        </section>
-
-        <section className="card">
-          <h3>3. Play</h3>
-          {!started && <p className="hint small">Pick an opening above to begin.</p>}
+        <section className="card sec-play">
+          <h3>Play</h3>
+          {!started && <p className="hint small">Pick an opening below to begin, or load a saved line.</p>}
           {started && (
             <>
               <p className="status">
@@ -319,6 +485,13 @@ export function OpeningPrep() {
                       ? 'Your move.'
                       : 'Opponent is thinking…'}
               </p>
+              {yourTurn && (
+                <p className="arrow-key small">
+                  Arrows: <span className="key-dot" style={{ background: 'rgb(245, 190, 60)' }} /> most played in the
+                  statistics · <span className="key-dot" style={{ background: 'rgb(92, 139, 176)' }} /> engine
+                  second-best · <span className="key-dot" style={{ background: 'rgb(129, 182, 76)' }} /> engine best
+                </p>
+              )}
               <p className="small">
                 {onPreparedLine ? (
                   <span className="book-tag">On the prepared line</span>
@@ -357,13 +530,110 @@ export function OpeningPrep() {
                   })}
                 </div>
               )}
-              {feedback && <p className="feedback">{feedback}</p>}
-              {trap && <p className="trap">{trap}</p>}
+              {current.note && <p className="feedback">{current.note}</p>}
+              {current.trap && <p className="trap">{current.trap}</p>}
+
+              <div className="notation" aria-label="Moves">
+                {notation.length === 0 && <span className="hint small">No moves yet.</span>}
+                {notation.map(({ index, san }) => (
+                  <button
+                    key={index}
+                    className={`move-btn ${index === at ? 'active' : ''}`}
+                    onClick={() => jumpTo(index)}
+                  >
+                    {index % 2 === 1 && <span className="move-num">{Math.ceil(index / 2)}.</span>}
+                    {san}
+                  </button>
+                ))}
+              </div>
+
               <div className="prep-row">
-                <button onClick={restartLine}>Restart line</button>
+                <button onClick={() => setShowTraps((v) => !v)} disabled={!yourTurn}>
+                  {showTraps ? 'Hide traps' : 'Show traps'}
+                </button>
+                <button onClick={saveCurrentLine} disabled={path.length === 0}>
+                  Save this line
+                </button>
+                <button onClick={restartLine} disabled={!opening}>
+                  Restart line
+                </button>
               </div>
             </>
           )}
+        </section>
+
+        {started && (
+          <div className="sec-engine">
+            <LivePanel fen={fen} onLines={handleLive} />
+          </div>
+        )}
+
+        <section className="card sec-open">
+          <h3>Your side and opening</h3>
+          <div className="prep-row">
+            <button className={side === 'w' ? 'active' : ''} onClick={() => setSide('w')}>
+              I play White
+            </button>
+            <button className={side === 'b' ? 'active' : ''} onClick={() => setSide('b')}>
+              I play Black
+            </button>
+          </div>
+          <input
+            placeholder="Opening name or ECO, e.g. Sicilian or B20"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search openings"
+          />
+          <div className="prep-list">
+            {matches.map((line) => (
+              <button key={`${line.eco}-${line.name}`} onClick={() => startPreparation(line, side)}>
+                <span className="hint">{line.eco}</span> {line.name}
+              </button>
+            ))}
+          </div>
+          {opening && (
+            <p className="small">
+              Preparing <b>{opening.name}</b> as {side === 'w' ? 'White' : 'Black'}.{' '}
+              <button className="link" onClick={restartLine}>
+                Restart
+              </button>
+            </p>
+          )}
+        </section>
+
+        <section className="card sec-variations">
+          <h3>Prepared variations</h3>
+          {saved.length === 0 && <p className="hint small">Lines you save appear here, kept on this device.</p>}
+          {saved.map((entry) => (
+            <div key={entry.id} className="saved-line">
+              <span className="small">
+                {entry.name} · {entry.side === 'w' ? 'White' : 'Black'}
+              </span>
+              <span className="prep-row">
+                <button onClick={() => loadSavedLine(entry)}>Load</button>
+                <button className="link" onClick={() => deleteSaved(entry.id)}>
+                  Delete
+                </button>
+              </span>
+            </div>
+          ))}
+        </section>
+
+        <section className="card sec-stats">
+          <h3>Statistics</h3>
+          {libraryState === 'loading' && <p className="hint small">Loading the opening statistics…</p>}
+          {libraryState === 'missing' && (
+            <p className="error small">The opening statistics file could not be loaded.</p>
+          )}
+          {libraryState === 'ready' && library && (
+            <p className="hint small">
+              {library.records.toLocaleString()} opening lines from 20 million rated Lichess games (2024). Each move
+              shows how many games reached it and how it scored.
+            </p>
+          )}
+          <p className="hint small">
+            Data: Chess Multiverse Opening Intelligence Database, CC BY-SA 4.0. Source on GitHub: chessmultiverse-opening-analytics-2024.
+          </p>
         </section>
       </aside>
     </div>

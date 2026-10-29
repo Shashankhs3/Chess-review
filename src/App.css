@@ -1197,3 +1197,85 @@ button.link {
     max-height: none;
   }
 }
+
+/* Opening prep: the board and its arrow overlay share one box. */
+.board-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.saved-line {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--panel-2);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+}
+
+/* Colour key for the opening prep arrows. */
+.arrow-key .key-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin: 0 4px 0 6px;
+  vertical-align: middle;
+}
+
+/* ---------- Opening prep: navigation, notation, and panel order ---------- */
+
+.board-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.board-nav button {
+  min-height: 40px;
+  min-width: 44px;
+}
+
+.notation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.move-btn {
+  min-height: 30px;
+  padding: 2px 8px;
+  background: var(--panel-2);
+  font-size: 0.9rem;
+}
+
+.move-btn.active {
+  outline: 2px solid var(--accent);
+  background: #3a4a2a;
+}
+
+.move-num {
+  color: var(--muted);
+  margin-right: 3px;
+}
+
+/* Play (with the engine and suggestions) comes first, then the rest of the panels. */
+.sec-play { order: 1; }
+.sec-engine { order: 2; }
+.sec-open { order: 3; }
+.sec-variations { order: 4; }
+.sec-stats { order: 5; }
+
+.prep-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
