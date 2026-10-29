@@ -59,6 +59,9 @@ export class StockfishEngine {
   private watchFen: string | null = null;
   private watchLines = new Map<number, LiveLine>();
   private watchCallback: ((lines: LiveLine[]) => void) | null = null;
+  private watchSearching = false;
+  /** Stops sent to the live search whose "bestmove" has not arrived yet. */
+  private stopsPending = 0;
   private lastEmit = 0;
   private emitTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -94,15 +97,28 @@ export class StockfishEngine {
       this.watchFen = fen;
       this.watchLines = new Map();
       this.watchCallback = onUpdate;
-      this.send('stop');
+      this.stopSearch();
       this.send(`position fen ${fen}`);
       this.send('go infinite');
+      this.watchSearching = true;
     });
   }
 
   stopWatching() {
     this.watchFen = null;
     this.watchCallback = null;
+    this.stopSearch();
+  }
+
+  /**
+   * Stops the running live search. Stockfish answers each stop with one "bestmove" line, and
+   * until that line arrives the old search can still print lines. Those are ignored, so they
+   * can't leak into the position that replaces it.
+   */
+  private stopSearch() {
+    if (!this.watchSearching) return;
+    this.stopsPending++;
+    this.watchSearching = false;
     this.send('stop');
   }
 
@@ -143,6 +159,8 @@ export class StockfishEngine {
   private handleInfo(line: string) {
     // Bound-only scores are not exact evaluations.
     if (/ (upperbound|lowerbound)\b/.test(line)) return;
+    // Output from a search that has been stopped, but not yet confirmed, is stale.
+    if (this.stopsPending > 0) return;
     const depthMatch = /\bdepth (\d+)/.exec(line);
     const scoreMatch = /\bscore (cp|mate) (-?\d+)/.exec(line);
     if (!depthMatch || !scoreMatch) return;
@@ -175,6 +193,11 @@ export class StockfishEngine {
   }
 
   private handleBestMove() {
+    if (this.stopsPending > 0) {
+      // The answer to one of our stops: the old live search has ended.
+      this.stopsPending--;
+      return;
+    }
     const job = this.current;
     if (!job) return; // e.g. the `stop` from a live search finishing
     this.current = null;

@@ -23,3 +23,9 @@ export const COLORS: Record<Classification, string> = {
   miss: '#d6589f',
   blunder: '#fa412d',
 };
+
+/**
+ * Board square colours, set explicitly so they stay the same in dark mode. (Without this,
+ * some phones' forced-dark settings recolour the squares.)
+ */
+export const BOARD_COLORS = { light: '#F0D9B5', dark: '#B58863' } as const;

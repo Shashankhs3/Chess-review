@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, 
 import { Chess, type Square } from 'chess.js';
 import { Chessboard, type Arrow, type ChessboardOptions } from 'react-chessboard';
 import { EvalGraph } from './components/EvalGraph';
+import { PracticeBoard } from './components/PracticeBoard';
+import { playSound, setSoundEnabled, soundEnabled, soundForSan } from './lib/sound';
 import { LivePanel } from './components/LivePanel';
 import {
   analyzeGame,
@@ -35,7 +37,7 @@ import {
 } from './lib/stats';
 import { StockfishEngine, type LiveLine } from './lib/engine';
 import { openingAt } from './lib/openings';
-import { COLORS, LABELS } from './lib/styles';
+import { BOARD_COLORS, COLORS, LABELS } from './lib/styles';
 import './App.css';
 
 const START_FEN = new Chess().fen();
@@ -259,6 +261,18 @@ export default function App() {
     return true;
   }
 
+  // A move sound plays whenever the board advances by one move: stepping, replaying, or playing a move.
+  const previousCursor = useRef(cursor);
+  useEffect(() => {
+    const before = previousCursor.current;
+    previousCursor.current = cursor;
+    if (before.line !== cursor.line || cursor.ply !== before.ply + 1) return;
+    const move = lineMoves(cursor.line)[cursor.ply - 1];
+    if (move) playSound(soundForSan(move.san));
+    // lineMoves reads the current lines, which this effect already depends on through cursor and branches.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursor]);
+
   // The coaching card describes one move, so it closes once the user moves elsewhere.
   // It stays open on the position just before that move and the one just after it.
   useEffect(() => {
@@ -369,6 +383,8 @@ export default function App() {
     // Hand-drawn arrows are cleared whenever the position changes, so they never linger.
     clearArrowsOnPositionChange: true,
     animationDurationInMs: 150,
+    lightSquareStyle: { backgroundColor: BOARD_COLORS.light },
+    darkSquareStyle: { backgroundColor: BOARD_COLORS.dark },
     onPieceDrop: ({ sourceSquare, targetSquare }) => {
       setPickedSquare(null);
       if (!targetSquare) return false;
@@ -781,14 +797,42 @@ export default function App() {
     );
   }
 
+  const [view, setView] = useState<'review' | 'practice'>('review');
+  const [soundOn, setSoundOn] = useState(() => soundEnabled());
+
+  function toggleSound() {
+    setSoundOn((on) => {
+      setSoundEnabled(!on);
+      return !on;
+    });
+  }
+
   const currentLineLabel = onMain
     ? `Game · move ${cursor.ply} of ${mainMoves.length}`
     : `Variation (${lineMoves(cursor.line).length} move${lineMoves(cursor.line).length === 1 ? '' : 's'})`;
+
+  if (view === 'practice') {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <h1>Practice board</h1>
+          <button onClick={() => setView('review')}>← Back to review</button>
+        </header>
+        <PracticeBoard />
+      </div>
+    );
+  }
 
   return (
     <div className="app">
       <header className="topbar">
         <h1>Chess Review</h1>
+        <button onClick={() => setView('practice')} title="Free moves, set up positions, then play with the rules">
+          Practice board
+        </button>
+        <button onClick={toggleSound} aria-pressed={soundOn} aria-label={soundOn ? 'Mute move sounds' : 'Turn on move sounds'}>
+          {soundOn ? '🔊 Sound on' : '🔇 Sound off'}
+        </button>
         <form className="load-form" onSubmit={handleLoad}>
           <input
             placeholder="chess.com username"

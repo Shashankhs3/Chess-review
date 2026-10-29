@@ -963,3 +963,89 @@ button:disabled {
   font-weight: 700;
   vertical-align: middle;
 }
+
+/* ---------- Practice board ---------- */
+
+.practice {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.practice-board {
+  width: min(100%, calc(100vh - 170px));
+  aspect-ratio: 1 / 1;
+  justify-self: center;
+}
+
+.practice-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.practice-panel h3 {
+  margin: 0;
+  color: #fff;
+}
+
+.palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+
+.piece-btn {
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 6px 0;
+  min-height: 44px;
+  background: var(--panel-2);
+}
+
+.piece-btn.active,
+.practice-tools button.active,
+.side-choice button.active {
+  outline: 2px solid var(--accent);
+  background: #3a4a2a;
+}
+
+.practice-tools,
+.side-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.practice-tools button,
+.side-choice button {
+  flex: 1;
+  min-height: 36px;
+}
+
+.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #161512;
+  font-weight: 600;
+}
+
+.status {
+  margin: 0;
+  color: #fff;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .practice {
+    grid-template-columns: 1fr;
+  }
+
+  .practice-board {
+    width: min(100%, 560px);
+  }
+}
