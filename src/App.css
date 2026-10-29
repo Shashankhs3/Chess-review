@@ -1063,3 +1063,137 @@ button:disabled {
   pointer-events: none;
   z-index: 5;
 }
+
+/* ---------- Opening preparation ---------- */
+
+.prep {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+
+.prep-board {
+  width: min(100%, calc(100vh - 170px));
+  aspect-ratio: 1 / 1;
+  justify-self: center;
+}
+
+.prep-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: calc(100vh - 110px);
+}
+
+.prep-panel .card h3 {
+  margin: 0 0 6px;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.prep-panel input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--panel-2);
+  color: #fff;
+  border: 1px solid #484541;
+  border-radius: 6px;
+  padding: 8px 10px;
+  min-height: 40px;
+  margin-bottom: 6px;
+}
+
+.prep-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.prep-row input[type='number'] {
+  width: 80px;
+  margin: 0 0 0 4px;
+}
+
+.prep-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.prep-list button {
+  text-align: left;
+  background: var(--panel-2);
+  font-size: 0.9rem;
+}
+
+.book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0;
+}
+
+.book-tag,
+.mistake-tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.book-tag {
+  background: #81b64c;
+  color: #161512;
+}
+
+.mistake-tag {
+  background: #fa412d;
+  color: #fff;
+}
+
+.feedback {
+  background: var(--panel-2);
+  border-left: 3px solid #5c8bb0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.prep .trap {
+  color: #ffa459;
+  font-size: 0.9rem;
+}
+
+button.link {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  padding: 0 4px;
+  min-height: 0;
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .prep {
+    grid-template-columns: 1fr;
+  }
+
+  .prep-board {
+    width: min(100%, 560px);
+  }
+
+  .prep-panel {
+    max-height: none;
+  }
+}

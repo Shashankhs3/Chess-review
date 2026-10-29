@@ -4,6 +4,7 @@ import { Chessboard, type Arrow, type ChessboardOptions } from 'react-chessboard
 import { EvalGraph } from './components/EvalGraph';
 import { PracticeBoard } from './components/PracticeBoard';
 import { EngineArrows } from './components/EngineArrows';
+import { OpeningPrep } from './components/OpeningPrep';
 import { playSound, setSoundEnabled, soundEnabled, soundForSan } from './lib/sound';
 import { LivePanel } from './components/LivePanel';
 import {
@@ -813,7 +814,7 @@ export default function App() {
     );
   }
 
-  const [view, setView] = useState<'review' | 'practice'>('review');
+  const [view, setView] = useState<'review' | 'practice' | 'prep'>('review');
   const [soundOn, setSoundOn] = useState(() => soundEnabled());
 
   function toggleSound() {
@@ -826,6 +827,18 @@ export default function App() {
   const currentLineLabel = onMain
     ? `Game · move ${cursor.ply} of ${mainMoves.length}`
     : `Variation (${lineMoves(cursor.line).length} move${lineMoves(cursor.line).length === 1 ? '' : 's'})`;
+
+  if (view === 'prep') {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <h1>Opening preparation</h1>
+          <button onClick={() => setView('review')}>← Back to review</button>
+        </header>
+        <OpeningPrep />
+      </div>
+    );
+  }
 
   if (view === 'practice') {
     return (
@@ -845,6 +858,9 @@ export default function App() {
         <h1>Chess Review</h1>
         <button onClick={() => setView('practice')} title="Free moves, set up positions, then play with the rules">
           Practice board
+        </button>
+        <button onClick={() => setView('prep')} title="Prepare an opening as White or Black, against real games">
+          Opening prep
         </button>
         <button onClick={toggleSound} aria-pressed={soundOn} aria-label={soundOn ? 'Mute move sounds' : 'Turn on move sounds'}>
           {soundOn ? '🔊 Sound on' : '🔇 Sound off'}

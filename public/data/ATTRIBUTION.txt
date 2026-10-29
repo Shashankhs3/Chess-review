@@ -1,0 +1,5 @@
+Opening statistics: "Chess Multiverse Opening Intelligence Database (20M Lichess subset)"
+by Sparsh Varshney, 2026. Source: https://github.com/sciencewithsaucee-sudo/chessmultiverse-opening-analytics-2024
+DOI: https://doi.org/10.5281/zenodo.19307100
+Licence: Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0). Derived material in this app is shared under the same licence.
+Derived from 20 million rated Lichess games from 2024.
