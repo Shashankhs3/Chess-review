@@ -158,8 +158,8 @@ export default function App() {
   const [cursor, setCursor] = useState<Cursor>({ line: 'main', ply: 0 });
   const [preview, setPreview] = useState<{ fens: string[]; moves: Move[] }>({ fens: [START_FEN], moves: [] });
   const [autoPlay, setAutoPlay] = useState(false);
-  // Last ply whose analysis is complete in order; during analysis the board follows it.
-  const [syncPly, setSyncPly] = useState(0);
+  // True while the board follows the analysis. Set off by the user moving the board, and when the analysis ends.
+  const syncingRef = useRef(false);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [pickedSquare, setPickedSquare] = useState<string | null>(null);
   // Live engine lines, stored with the position they were searched from.
@@ -284,12 +284,6 @@ export default function App() {
     }
   }, [cursor, coachIndex]);
 
-  // While the analysis runs, the board follows the last analysed position.
-  useEffect(() => {
-    if (!autoPlay || !progress) return;
-    setCursor({ line: 'main', ply: syncPly });
-  }, [syncPly, autoPlay, progress]);
-
   // Once the analysis is done, play on from where the board is, one move at a time.
   useEffect(() => {
     if (!autoPlay || progress) return;
@@ -304,6 +298,7 @@ export default function App() {
 
   function step(delta: number) {
     setAutoPlay(false);
+    syncingRef.current = false;
     const { line, ply } = cursor;
     if (delta < 0) {
       if (ply === 0) {
@@ -356,6 +351,15 @@ export default function App() {
     const drawable = (uci: string | undefined) => (uci && isLegalUci(fen, uci) ? uci : undefined);
     const second = drawable(liveLines[1]?.pv[0]);
     const top = drawable(liveLines[0]?.pv[0]) ?? drawable(onMain ? analysis?.bestMoves[cursor.ply] : undefined);
+    // The move the game actually plays next, coloured by how the analysis rated it. Drawn first so the engine's arrows sit on top.
+    const played = onMain && analysis && cursor.ply < analysis.moves.length ? analysis.moves[cursor.ply] : undefined;
+    if (played && drawable(played.uci)) {
+      list.push({
+        startSquare: played.uci.slice(0, 2),
+        endSquare: played.uci.slice(2, 4),
+        color: COLORS[played.classification],
+      });
+    }
     if (second) {
       list.push({ startSquare: second.slice(0, 2), endSquare: second.slice(2, 4), color: 'rgba(92, 139, 176, 0.85)' });
     }
@@ -568,7 +572,7 @@ export default function App() {
     setAnalysisError(null);
     setCursor({ line: 'main', ply: 0 });
     setPreview(replayGame(game.pgn));
-    setSyncPly(0);
+    syncingRef.current = true;
     setAutoPlay(true); // the board follows the analysis while it runs
     setBranches([]);
     setPickedSquare(null);
@@ -584,13 +588,17 @@ export default function App() {
         },
         // Positions 0..n-1 are analysed, so the board can show position n-1.
         onPrefix: (analysedInOrder) => {
-          if (isCurrent()) setSyncPly(Math.max(0, analysedInOrder - 1));
+          // Set the board directly, not through an effect, so no late update can overwrite the reset below.
+          if (isCurrent() && syncingRef.current) {
+            setCursor({ line: 'main', ply: Math.max(0, analysedInOrder - 1) });
+          }
         },
         isCancelled: () => !isCurrent(),
       });
       if (result && isCurrent()) {
         setAnalysis(result);
         // Analysis finished: put the board back on the starting position, ready to browse.
+        syncingRef.current = false;
         setAutoPlay(false);
         setCursor({ line: 'main', ply: 0 });
         recordAnalysis(game, result);
@@ -598,7 +606,10 @@ export default function App() {
     } catch (error) {
       if (isCurrent()) setAnalysisError(messageOf(error));
     } finally {
-      if (isCurrent()) setProgress(null);
+      if (isCurrent()) {
+        syncingRef.current = false;
+        setProgress(null);
+      }
     }
   }
 
