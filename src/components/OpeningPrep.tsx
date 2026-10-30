@@ -3,6 +3,7 @@ import { Chess, type Color, type Square } from 'chess.js';
 import { Chessboard, type ChessboardOptions } from 'react-chessboard';
 import { uciToSan } from '../lib/analysis';
 import { OPENING_LINES, type OpeningLine } from '../lib/openingdb';
+import { SICILIAN_REPERTOIRE } from '../data/sicilian_repertoire';
 import type { LiveLine } from '../lib/engine';
 import {
   libraryMoves,
@@ -119,6 +120,9 @@ function toUciLine(sans: string[]): string[] {
   return out;
 }
 
+/** The Sicilian repertoire lines as UCI, which the opponent follows when you play White. */
+const REPERTOIRE_UCI = SICILIAN_REPERTOIRE.map((o) => toUciLine(o.moves));
+
 export function OpeningPrep() {
   const [library, setLibrary] = useState<Library | null>(null);
   const [libraryState, setLibraryState] = useState<'loading' | 'ready' | 'missing'>('loading');
@@ -160,14 +164,18 @@ export function OpeningPrep() {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     // Names that start with the search come first, then names that contain it, then shorter names.
-    return OPENING_LINES.filter((o) => o.name.toLowerCase().includes(q) || o.eco.toLowerCase() === q)
-      .sort((a, b) => {
-        const startA = a.name.toLowerCase().startsWith(q) ? 0 : 1;
-        const startB = b.name.toLowerCase().startsWith(q) ? 0 : 1;
-        return startA - startB || a.name.length - b.name.length;
-      })
-      .slice(0, 8);
-  }, [query]);
+    const find = (pool: OpeningLine[], limit: number) =>
+      pool
+        .filter((o) => o.name.toLowerCase().includes(q) || o.eco.toLowerCase() === q)
+        .sort((a, b) => {
+          const startA = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+          const startB = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+          return startA - startB || a.name.length - b.name.length;
+        })
+        .slice(0, limit);
+    // The Sicilian repertoire is for White, so it is offered only when you play White, ahead of the ECO names.
+    return side === 'w' ? [...find(SICILIAN_REPERTOIRE, 8), ...find(OPENING_LINES, 4)] : find(OPENING_LINES, 8);
+  }, [query, side]);
 
   const candidates = useMemo(() => libraryMoves(library, path), [library, path]);
   const currentName = useMemo(() => openingNameFor(library, path), [library, path]);
@@ -257,7 +265,11 @@ export function OpeningPrep() {
       let trapText: string | null = null;
 
       // The main line first, then any saved variation for this side that runs through this position.
-      const variations = [line, ...saved.filter((s) => s.side === mySide).map((s) => s.path)];
+      const variations = [
+        line,
+        ...saved.filter((s) => s.side === mySide).map((s) => s.path),
+        ...(mySide === 'w' ? REPERTOIRE_UCI : []),
+      ];
       for (const variation of variations) {
         const depth = last.path.length;
         const sharesPath = variation.slice(0, depth).every((m, i) => m === last.path[i]);
