@@ -25,6 +25,22 @@ export const COLORS: Record<Classification, string> = {
 };
 
 /**
+ * Darker versions of COLORS for text on the light theme. The fills are too faint to read as
+ * numbers on white or cream (yellow and grey especially), so text uses these instead.
+ */
+export const TEXT_COLORS: Record<Classification, string> = {
+  brilliant: '#0f7a65',
+  great: '#3d6a8f',
+  best: '#4f7d27',
+  excellent: '#5f7f1e',
+  good: '#5f6b75',
+  inaccuracy: '#8a6a00',
+  mistake: '#a4510a',
+  miss: '#a3336f',
+  blunder: '#c0392b',
+};
+
+/**
  * Board square colours, set explicitly so they stay the same in dark mode. (Without this,
  * some phones' forced-dark settings recolour the squares.)
  */

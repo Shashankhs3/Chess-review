@@ -1,12 +1,49 @@
+/*
+ * Design tokens: a warm brown-and-white light theme.
+ * Greys are avoided on purpose; every neutral is a tint of the same brown so text, borders and
+ * surfaces read as one family. Text/background pairs below are all at least 4.5:1.
+ */
 :root {
-  --bg: #161512;
-  --panel: #262421;
-  --panel-2: #302e2b;
-  --text: #bababa;
-  --muted: #8b8985;
-  --accent: #81b64c;
-  --error: #fa412d;
-  color-scheme: dark;
+  /* Surfaces */
+  --bg: #efe6da;
+  --panel: #ffffff;
+  --panel-2: #f7f1e8;
+
+  /* Lines */
+  --border: #e6dac8;
+  --border-strong: #d2c1a8;
+  --border-hover: #a98f6e;
+
+  /* Text */
+  --text: #4a3b2e;
+  --text-strong: #2b1f16;
+  --muted: #6f5d4a;
+
+  /* Brand: one brown accent, used for the primary action and the "current" marker */
+  --accent: #8a5a32;
+  --accent-hover: #744a28;
+  --accent-soft: #f1e1cc;
+  --on-accent: #ffffff;
+
+  /* Meaning */
+  --win: #4f7d27;
+  --loss: #c0392b;
+  --draw: #7d6f62;
+  --error: #b3261e;
+  --warn: #e0a526;
+  --warn-text: #8a5a00;
+  --caution-text: #a4510a;
+  --good-text: #0f7a65;
+
+  /* Eval bar and graph */
+  --eval-white: #ffffff;
+  --eval-black: #4a3b2e;
+  --graph-cursor: #e08a1e;
+
+  /* Elevation: a hairline plus a soft brown shadow, never a grey drop shadow */
+  --shadow: 0 1px 2px rgba(74, 59, 46, 0.08), 0 4px 12px rgba(74, 59, 46, 0.06);
+
+  color-scheme: light;
 }
 
 * {
@@ -24,4 +61,11 @@ button,
 input,
 select {
   font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

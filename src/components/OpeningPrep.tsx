@@ -18,6 +18,7 @@ import { hintStyles, legalTargets } from '../lib/dots';
 import { BOARD_COLORS } from '../lib/styles';
 import { playSound, soundForSan } from '../lib/sound';
 import { EngineArrows, type OverlayArrow } from './EngineArrows';
+import { Icon } from './Icon';
 import { LivePanel } from './LivePanel';
 
 /**
@@ -502,19 +503,21 @@ export function OpeningPrep() {
         </div>
         <div className="board-nav" role="group" aria-label="Move navigation">
           <button onClick={goStart} disabled={at === 0} aria-label="Start">
-            ⏮
+            <Icon name="first" />
           </button>
           <button onClick={goBack} disabled={at === 0} aria-label="Back">
-            ◀ Back
+            <Icon name="prev" />
+            <span>Back</span>
           </button>
           <span className="hint small">
             move {Math.ceil(at / 2)} of {Math.ceil((timeline.length - 1) / 2)}
           </span>
           <button onClick={goNext} disabled={at >= timeline.length - 1} aria-label="Next">
-            Next ▶
+            <span>Next</span>
+            <Icon name="next" />
           </button>
           <button onClick={goEnd} disabled={at >= timeline.length - 1} aria-label="End">
-            ⏭
+            <Icon name="last" />
           </button>
         </div>
       </div>

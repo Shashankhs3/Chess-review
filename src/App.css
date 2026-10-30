@@ -18,52 +18,60 @@
 .topbar {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 8px 16px;
   margin-bottom: 8px;
 }
 
 .topbar h1 {
   margin: 0;
-  color: #fff;
+  color: var(--text-strong);
   font-size: 1.25rem;
   white-space: nowrap;
 }
 
+/* One row: username, months, depth and the button stay aligned. The whole form wraps to its own line when the bar is full. */
 .load-form {
-  flex: 1;
+  flex: 1 1 520px;
+  min-width: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 8px;
 }
 
 .load-form input,
 .load-form select {
   background: var(--panel);
-  color: #fff;
-  border: 1px solid #484541;
+  color: var(--text-strong);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 8px 10px;
   min-height: 40px;
 }
 
 .load-form input {
-  flex: 1 1 200px;
+  flex: 1 1 180px;
   min-width: 0;
+}
+
+.load-form select {
+  flex: none;
 }
 
 button {
   cursor: pointer;
-  color: #fff;
+  color: var(--text-strong);
   background: var(--panel-2);
-  border: 1px solid #484541;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 8px 12px;
   min-height: 36px;
 }
 
 button:hover:not(:disabled) {
-  border-color: #6b6862;
+  border-color: var(--border-hover);
 }
 
 button:focus-visible,
@@ -81,9 +89,11 @@ button:disabled {
 .load-form button[type='submit'] {
   background: var(--accent);
   border-color: var(--accent);
-  color: #161512;
+  color: var(--on-accent);
   font-weight: 600;
   min-width: 120px;
+  flex: none;
+  white-space: nowrap;
 }
 
 .error {
@@ -170,7 +180,7 @@ button:disabled {
   width: 18px;
   border-radius: 4px;
   overflow: hidden;
-  background: #404040;
+  background: var(--eval-black);
   flex: none;
 }
 
@@ -179,7 +189,7 @@ button:disabled {
   bottom: 0;
   left: 0;
   right: 0;
-  background: #f0f0f0;
+  background: var(--eval-white);
   transition: height 0.2s ease;
 }
 
@@ -205,7 +215,7 @@ button:disabled {
 .eval-text {
   min-width: 150px;
   text-align: center;
-  color: #fff;
+  color: var(--text-strong);
   font-variant-numeric: tabular-nums;
 }
 
@@ -236,7 +246,7 @@ button:disabled {
 }
 
 .opening b {
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .eval-graph {
@@ -269,7 +279,7 @@ button:disabled {
   position: relative;
   line-height: 26px;
   padding-left: 10px;
-  color: #fff;
+  color: var(--text-strong);
   font-size: 0.85rem;
 }
 
@@ -297,7 +307,7 @@ button:disabled {
 
 .live h3 {
   margin: 0;
-  color: #fff;
+  color: var(--text-strong);
   font-size: 1rem;
 }
 
@@ -346,7 +356,7 @@ button:disabled {
 }
 
 .tab.active {
-  color: #fff;
+  color: var(--text-strong);
   border-bottom-color: var(--accent);
   background: var(--panel);
 }
@@ -363,7 +373,7 @@ button:disabled {
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--panel-2);
-  color: #fff;
+  color: var(--text-strong);
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -393,7 +403,7 @@ button:disabled {
 }
 
 .accuracy span {
-  color: #fff;
+  color: var(--text-strong);
   font-size: 1.4rem;
   font-weight: 700;
 }
@@ -406,12 +416,12 @@ button:disabled {
 }
 
 .counts b {
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .tab-body h3 {
   margin: 14px 0 6px;
-  color: #fff;
+  color: var(--text-strong);
   font-size: 1rem;
 }
 
@@ -433,7 +443,7 @@ button:disabled {
   padding: 0 6px;
   border-radius: 4px;
   background: var(--accent);
-  color: #161512;
+  color: var(--on-accent);
   font-size: 0.7rem;
   font-weight: 700;
   vertical-align: middle;
@@ -454,7 +464,7 @@ button:disabled {
 }
 
 .moment-text b {
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .moment-text small {
@@ -462,7 +472,7 @@ button:disabled {
 }
 
 .moment.trap {
-  border-left: 3px solid #ffa459;
+  border-left: 3px solid var(--caution-text);
 }
 
 .tag {
@@ -512,7 +522,7 @@ button:disabled {
 }
 
 .move.notable {
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .move .symbol {
@@ -548,7 +558,7 @@ button:disabled {
 
 .coach h3,
 .coach h4 {
-  color: #fff;
+  color: var(--text-strong);
   margin: 10px 0 4px;
 }
 
@@ -585,11 +595,11 @@ button:disabled {
 }
 
 .coach .trap {
-  color: #ffa459;
+  color: var(--caution-text);
 }
 
 .highlights {
-  color: #26c2a3;
+  color: var(--good-text);
 }
 
 /* ---------- Narrow screens: stack and let the page scroll ---------- */
@@ -638,7 +648,7 @@ button:disabled {
 .warn {
   margin: 0 0 10px;
   padding: 8px 10px;
-  border-left: 3px solid #f7c631;
+  border-left: 3px solid var(--warn);
   border-radius: 6px;
   background: var(--panel-2);
   color: var(--text);
@@ -646,7 +656,7 @@ button:disabled {
 }
 
 .warn b {
-  color: #f7c631;
+  color: var(--warn-text);
 }
 
 .warn ul {
@@ -668,7 +678,7 @@ button:disabled {
   align-items: center;
   padding: 4px 0;
   text-align: center;
-  border-bottom: 1px solid #332f2b;
+  border-bottom: 1px solid var(--border);
 }
 
 .counts-row > span:not(.counts-head span) {
@@ -680,9 +690,9 @@ button:disabled {
 }
 
 .counts-head {
-  color: #fff;
+  color: var(--text-strong);
   font-weight: 600;
-  border-bottom: 1px solid #484541;
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .counts-head span {
@@ -697,7 +707,7 @@ button:disabled {
   flex: none;
   margin-bottom: 8px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #332f2b;
+  border-bottom: 1px solid var(--border);
 }
 
 .batch .small {
@@ -735,7 +745,7 @@ button:disabled {
 
 .game-card .tc {
   text-transform: capitalize;
-  color: #fff;
+  color: var(--text-strong);
 }
 
 /* ---------- Stats ---------- */
@@ -750,8 +760,8 @@ button:disabled {
   flex: 1;
   min-height: 36px;
   background: var(--panel-2);
-  color: #fff;
-  border: 1px solid #484541;
+  color: var(--text-strong);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 4px 6px;
 }
@@ -771,7 +781,7 @@ button:disabled {
 }
 
 .stat-grid b {
-  color: #fff;
+  color: var(--text-strong);
   font-size: 1.1rem;
 }
 
@@ -785,7 +795,7 @@ button:disabled {
 .stat-table td {
   padding: 4px 6px;
   text-align: left;
-  border-bottom: 1px solid #332f2b;
+  border-bottom: 1px solid var(--border);
 }
 
 .stat-table th {
@@ -795,14 +805,14 @@ button:disabled {
 
 .tip {
   background: var(--panel-2);
-  border-left: 3px solid #f7c631;
+  border-left: 3px solid var(--warn);
   border-radius: 6px;
   padding: 8px 10px;
   margin-bottom: 6px;
 }
 
 .tip b {
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .tip p {
@@ -833,7 +843,7 @@ button:disabled {
 .board-square {
   border-radius: 6px;
   overflow: hidden;
-  outline: 1px solid #3a3733;
+  outline: 1px solid var(--border-strong);
 }
 
 .board-row .eval-bar {
@@ -879,7 +889,7 @@ button:disabled {
 }
 
 .strength b {
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .key-nav {
@@ -933,20 +943,20 @@ button:disabled {
   border-radius: 4px;
   font-weight: 700;
   font-size: 0.75rem;
-  color: #161512;
+  color: #fff;
 }
 
 .result.win {
-  background: #81b64c;
+  background: var(--win);
 }
 
 .result.loss {
-  background: #fa412d;
+  background: var(--loss);
   color: #fff;
 }
 
 .result.draw {
-  background: #9b9893;
+  background: var(--draw);
 }
 
 /* Coaching card: the border takes the move's classification colour (set inline). */
@@ -958,7 +968,7 @@ button:disabled {
   display: inline-block;
   padding: 1px 8px;
   border-radius: 4px;
-  color: #161512;
+  color: #2b1f16;
   font-size: 0.8rem;
   font-weight: 700;
   vertical-align: middle;
@@ -989,7 +999,7 @@ button:disabled {
 
 .practice-panel h3 {
   margin: 0;
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .palette {
@@ -1010,7 +1020,7 @@ button:disabled {
 .practice-tools button.active,
 .side-choice button.active {
   outline: 2px solid var(--accent);
-  background: #3a4a2a;
+  background: var(--accent-soft);
 }
 
 .practice-tools,
@@ -1030,13 +1040,13 @@ button:disabled {
 .primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #161512;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
 .status {
   margin: 0;
-  color: #fff;
+  color: var(--text-strong);
   font-weight: 600;
 }
 
@@ -1092,7 +1102,7 @@ button:disabled {
 
 .prep-panel .card h3 {
   margin: 0 0 6px;
-  color: #fff;
+  color: var(--text-strong);
   font-size: 1rem;
 }
 
@@ -1100,8 +1110,8 @@ button:disabled {
   width: 100%;
   box-sizing: border-box;
   background: var(--panel-2);
-  color: #fff;
-  border: 1px solid #484541;
+  color: var(--text-strong);
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   padding: 8px 10px;
   min-height: 40px;
@@ -1152,26 +1162,26 @@ button:disabled {
 }
 
 .book-tag {
-  background: #81b64c;
-  color: #161512;
+  background: var(--win);
+  color: #fff;
 }
 
 .mistake-tag {
-  background: #fa412d;
+  background: var(--loss);
   color: #fff;
 }
 
 .feedback {
   background: var(--panel-2);
-  border-left: 3px solid #5c8bb0;
+  border-left: 3px solid var(--accent);
   border-radius: 6px;
   padding: 8px 10px;
   font-size: 0.9rem;
-  color: #fff;
+  color: var(--text-strong);
 }
 
 .prep .trap {
-  color: #ffa459;
+  color: var(--caution-text);
   font-size: 0.9rem;
 }
 
@@ -1259,7 +1269,7 @@ button.link {
 
 .move-btn.active {
   outline: 2px solid var(--accent);
-  background: #3a4a2a;
+  background: var(--accent-soft);
 }
 
 .move-num {
@@ -1273,6 +1283,320 @@ button.link {
 .sec-open { order: 3; }
 .sec-variations { order: 4; }
 .sec-stats { order: 5; }
+
+/* Evaluation graph colours (classes, so the theme tokens apply). */
+.eg-black { fill: var(--eval-black); }
+.eg-white { fill: var(--eval-white); }
+.eg-mid { stroke: var(--border-hover); }
+.eg-line { stroke: var(--muted); }
+.eg-cursor { stroke: var(--graph-cursor); }
+.eg-dot { stroke: var(--text-strong); }
+
+/* ---------- Icons and button content ---------- */
+
+.icon {
+  flex: none;
+  display: block;
+}
+
+.nav-tile,
+.sound-toggle,
+.back-btn,
+.icon-btn,
+.controls button,
+.key-nav button,
+.board-nav button,
+.tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+/* Desktop: the phone-only pieces stay hidden. Tab icons are kept for the phone bottom bar only,
+   because the desktop side panel is too narrow for four icon-and-label tabs. */
+.tagline,
+.load-title,
+.game-head,
+.tab .icon {
+  display: none;
+}
+
+/* ---------- Phones: home, game screen, bottom navigation (max 700px) ---------- */
+
+@media (max-width: 700px) {
+  .app {
+    padding: 12px 16px 16px;
+  }
+
+  /* The game screen gets room for the fixed bottom bar. */
+  .app.has-game {
+    padding-bottom: 96px;
+  }
+
+  /* Header: brand on the left, sound toggle on the right, three tiles, then the load card. */
+  .topbar:not(:has(> h1)) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .brand {
+    grid-column: 1 / span 2;
+  }
+
+  .brand h1 {
+    font-size: 1.5rem;
+  }
+
+  .tagline {
+    display: block;
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .sound-toggle {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    width: 44px;
+    padding: 0;
+  }
+
+  .sound-toggle span {
+    display: none;
+  }
+
+  .nav-tile {
+    flex-direction: column;
+    gap: 6px;
+    min-height: 76px;
+    padding: 10px 6px;
+    border: none;
+    border-radius: 14px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    color: var(--text-strong);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .nav-tile .icon {
+    color: var(--accent);
+  }
+
+  .load-form {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 14px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+  }
+
+  .load-title {
+    display: block;
+    margin: 0;
+    color: var(--text-strong);
+    font-size: 1.15rem;
+  }
+
+  .load-form input,
+  .load-form select {
+    flex: none;
+    width: 100%;
+    min-height: 48px;
+    background: var(--panel-2);
+  }
+
+  .load-form button[type='submit'] {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  .recent {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
+
+  /* Games list: a plain column of cards, no inner scroll box. */
+  .workspace {
+    gap: 14px;
+  }
+
+  .card {
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+  }
+
+  .game-list {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .batch {
+    border-bottom: none;
+    margin-bottom: 4px;
+  }
+
+  .game-card {
+    flex: none;
+    min-height: 56px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
+    font-size: 0.95rem;
+  }
+
+  .game-card.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* Game screen: sticky header with back, board, compact controls, bottom tabs. */
+  .app.has-game .game-list,
+  .app.has-game > .topbar:not(:has(> h1)) {
+    display: none;
+  }
+
+  .app.has-game .game-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: -12px -16px 0;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .game-head-title {
+    display: block;
+    overflow: hidden;
+    color: var(--text-strong);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .center-hint {
+    padding: 0;
+  }
+
+  .controls {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .controls .eval-text {
+    order: -1;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .controls button {
+    flex: 1;
+    min-width: 44px;
+    min-height: 48px;
+  }
+
+  .live {
+    height: auto;
+  }
+
+  .app:not(.has-game) .tabs,
+  .app:not(.has-game) .tab-body {
+    display: none;
+  }
+
+  /* Bottom navigation: the four analysis tabs stay in thumb reach. */
+  .app.has-game .tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    margin: 0;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    gap: 4px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -2px 12px rgba(74, 59, 46, 0.1);
+  }
+
+  .app.has-game .tab .icon {
+    display: block;
+  }
+
+  .app.has-game .tab {
+    flex-direction: column;
+    gap: 2px;
+    min-height: 56px;
+    padding: 4px 0;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.78rem;
+  }
+
+  .app.has-game .tab.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .app.has-game .tab-body {
+    margin-top: 10px;
+  }
+
+  /* Opening prep, opening trainer and practice board: slim sticky header with a back button. */
+  .topbar:has(> h1) {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    justify-content: space-between;
+    margin: -12px -16px 12px;
+    padding: 10px 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .topbar:has(> h1) h1 {
+    font-size: 1.1rem;
+  }
+
+  .back-btn {
+    min-height: 44px;
+  }
+
+  /* Touch targets: at least 44px tall on phones, including the prep board and search fields. */
+  button,
+  input,
+  select,
+  .chip,
+  .board-nav button,
+  .prep-panel input {
+    min-height: 44px;
+  }
+}
 
 .prep-panel {
   display: flex;

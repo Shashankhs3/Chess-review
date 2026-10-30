@@ -67,13 +67,13 @@ export function EvalGraph({ analysis, ply, onSelect }: Props) {
       role="img"
       aria-label="Evaluation graph; click to jump to a move"
     >
-      <rect width={width} height={HEIGHT} fill="#3a3834" />
-      <path d={area} fill="#e8e8e8" />
-      <line x1={0} x2={width} y1={HEIGHT / 2} y2={HEIGHT / 2} stroke="#777" strokeDasharray="4 4" />
-      <path d={line} fill="none" stroke="#9aa0a6" strokeWidth={1.25} strokeLinejoin="round" />
-      {ply >= 0 && <line x1={cursorX} x2={cursorX} y1={0} y2={HEIGHT} stroke="#81b64c" strokeWidth={2} />}
+      <rect className="eg-black" width={width} height={HEIGHT} />
+      <path className="eg-white" d={area} />
+      <line className="eg-mid" x1={0} x2={width} y1={HEIGHT / 2} y2={HEIGHT / 2} strokeDasharray="4 4" />
+      <path className="eg-line" d={line} fill="none" strokeWidth={1.25} strokeLinejoin="round" />
+      {ply >= 0 && <line className="eg-cursor" x1={cursorX} x2={cursorX} y1={0} y2={HEIGHT} strokeWidth={2} />}
       {dots.map((dot) => (
-        <circle key={dot.ply} cx={dot.x} cy={dot.y} r={4} fill={dot.color} stroke="#161512" strokeWidth={1} />
+        <circle className="eg-dot" key={dot.ply} cx={dot.x} cy={dot.y} r={4} fill={dot.color} strokeWidth={1} />
       ))}
     </svg>
   );

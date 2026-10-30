@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { Icon, type IconName } from './components/Icon';
 import { Chess, type Square } from 'chess.js';
 import { Chessboard, type Arrow, type ChessboardOptions } from 'react-chessboard';
 import { EvalGraph } from './components/EvalGraph';
@@ -41,7 +42,7 @@ import {
 } from './lib/stats';
 import { StockfishEngine, type LiveLine } from './lib/engine';
 import { openingAt } from './lib/openings';
-import { BOARD_COLORS, COLORS, LABELS } from './lib/styles';
+import { BOARD_COLORS, COLORS, LABELS, TEXT_COLORS } from './lib/styles';
 import './App.css';
 
 const START_FEN = new Chess().fen();
@@ -79,6 +80,8 @@ type Move = { san: string; uci: string };
 type Branch = { id: string; from: Cursor; fens: string[]; moves: Move[] };
 
 type TabId = 'engine' | 'moves' | 'coach' | 'stats';
+
+const TAB_ICON: Record<TabId, IconName> = { engine: 'engine', moves: 'moves', coach: 'coach', stats: 'stats' };
 
 type BatchProgress = { done: number; total: number; label: string };
 
@@ -567,6 +570,12 @@ export default function App() {
     void loadUser(username);
   }
 
+  /** Leaves the game screen (phones) and returns to the game list. */
+  function closeGame() {
+    setAutoPlay(false);
+    setSelected(null);
+  }
+
   async function openGame(game: ChessComGame) {
     const runId = ++runRef.current;
     const isCurrent = () => runRef.current === runId;
@@ -835,7 +844,10 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <h1>Opening preparation</h1>
-          <button onClick={() => setView('review')}>← Back to review</button>
+          <button onClick={() => setView('review')} className="back-btn">
+            <Icon name="back" />
+            <span>Back to review</span>
+          </button>
         </header>
         <OpeningPrep />
       </div>
@@ -847,7 +859,10 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <h1>Opening trainer</h1>
-          <button onClick={() => setView('review')}>← Back to review</button>
+          <button onClick={() => setView('review')} className="back-btn">
+            <Icon name="back" />
+            <span>Back to review</span>
+          </button>
         </header>
         <OpeningTrainer />
       </div>
@@ -859,7 +874,10 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <h1>Practice board</h1>
-          <button onClick={() => setView('review')}>← Back to review</button>
+          <button onClick={() => setView('review')} className="back-btn">
+            <Icon name="back" />
+            <span>Back to review</span>
+          </button>
         </header>
         <PracticeBoard />
       </div>
@@ -867,22 +885,35 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${selected ? 'has-game' : ''}`}>
       <header className="topbar">
-        <h1>Chess Review</h1>
-        <button onClick={() => setView('practice')} title="Free moves, set up positions, then play with the rules">
-          Practice board
+        <div className="brand">
+          <h1>Chess Review</h1>
+          <p className="tagline">Improve your game with data</p>
+        </div>
+        <button onClick={() => setView('practice')} title="Free moves, set up positions, then play with the rules" className="nav-tile">
+          <Icon name="practice" />
+          <span>Practice board</span>
         </button>
-        <button onClick={() => setView('prep')} title="Prepare an opening as White or Black, against real games">
-          Opening prep
+        <button onClick={() => setView('prep')} title="Prepare an opening as White or Black, against real games" className="nav-tile">
+          <Icon name="book" />
+          <span>Opening prep</span>
         </button>
-        <button onClick={() => setView('train')} title="Drill opening lines with spaced repetition">
-          Opening trainer
+        <button onClick={() => setView('train')} title="Drill opening lines with spaced repetition" className="nav-tile">
+          <Icon name="trainer" />
+          <span>Opening trainer</span>
         </button>
-        <button onClick={toggleSound} aria-pressed={soundOn} aria-label={soundOn ? 'Mute move sounds' : 'Turn on move sounds'}>
-          {soundOn ? '🔊 Sound on' : '🔇 Sound off'}
+        <button
+          onClick={toggleSound}
+          aria-pressed={soundOn}
+          aria-label={soundOn ? 'Mute move sounds' : 'Turn on move sounds'}
+          className="sound-toggle"
+        >
+          <Icon name={soundOn ? 'sound-on' : 'sound-off'} />
+          <span>{soundOn ? 'Sound on' : 'Sound off'}</span>
         </button>
         <form className="load-form" onSubmit={handleLoad}>
+          <h2 className="load-title">Load your games</h2>
           <input
             placeholder="chess.com username"
             value={username}
@@ -984,6 +1015,17 @@ export default function App() {
           })}
         </aside>
 
+        {selected && (
+          <div className="game-head">
+            <button className="icon-btn" onClick={closeGame} aria-label="Back to games">
+              <Icon name="back" />
+            </button>
+            <span className="game-head-title">
+              {selected.white.username} vs {selected.black.username}
+            </span>
+          </div>
+        )}
+
         <main className="center">
           {!selected ? (
             <p className="hint center-hint">{games && games.length > 0 ? 'Pick a game to analyse.' : ''}</p>
@@ -1000,20 +1042,28 @@ export default function App() {
               </div>
 
               <div className="controls">
-                <button onClick={() => { setAutoPlay(false); setCursor({ line: 'main', ply: 0 }); }} aria-label="Start">⏮</button>
-                <button onClick={() => step(-1)} aria-label="Previous move">◀</button>
+                <button onClick={() => { setAutoPlay(false); setCursor({ line: 'main', ply: 0 }); }} aria-label="Start">
+                  <Icon name="first" />
+                </button>
+                <button onClick={() => step(-1)} aria-label="Previous move">
+                  <Icon name="prev" />
+                </button>
                 <span className="eval-text">
                   {evalLabel && <>Eval {evalLabel}</>}
                   <span className="line-label">{currentLineLabel}</span>
                 </span>
-                <button onClick={() => step(1)} aria-label="Next move">▶</button>
-                <button onClick={() => { setAutoPlay(false); setCursor({ line: 'main', ply: mainMoves.length }); }} aria-label="End">⏭</button>
+                <button onClick={() => step(1)} aria-label="Next move">
+                  <Icon name="next" />
+                </button>
+                <button onClick={() => { setAutoPlay(false); setCursor({ line: 'main', ply: mainMoves.length }); }} aria-label="End">
+                  <Icon name="last" />
+                </button>
                 <button
                   onClick={() => setAutoPlay((on) => !on)}
                   aria-label={autoPlay ? 'Pause replay' : 'Play game'}
                   disabled={!selected || mainMoves.length === 0}
                 >
-                  {autoPlay ? '⏸' : '▶︎'}
+                  <Icon name={autoPlay ? 'pause' : 'play'} />
                 </button>
               </div>
               {!onMain && (
@@ -1063,7 +1113,8 @@ export default function App() {
                 className={`tab ${tab === id ? 'active' : ''}`}
                 onClick={() => setTab(id)}
               >
-                {label}
+                <Icon name={TAB_ICON[id]} />
+                <span>{label}</span>
               </button>
             ))}
           </div>
@@ -1117,13 +1168,13 @@ export default function App() {
                       </div>
                       {CLASSIFICATIONS.map((c) => (
                         <div key={c} className="counts-row">
-                          <b style={{ color: COLORS[c] }}>{classCounts.w[c]}</b>
+                          <b style={{ color: TEXT_COLORS[c] }}>{classCounts.w[c]}</b>
                           <span>
                             <span className="dot" style={{ background: COLORS[c] }} />
                             {LABELS[c]}
                             {SYMBOLS[c] && <span className="symbol"> {SYMBOLS[c]}</span>}
                           </span>
-                          <b style={{ color: COLORS[c] }}>{classCounts.b[c]}</b>
+                          <b style={{ color: TEXT_COLORS[c] }}>{classCounts.b[c]}</b>
                         </div>
                       ))}
                     </div>
@@ -1218,13 +1269,15 @@ export default function App() {
                 {analysis && keyIndexes.length > 0 && (
                   <div className="key-nav">
                     <button onClick={() => stepKeyMoment(-1)} disabled={keyPosition === 0}>
-                      ◀ Previous key moment
+                      <Icon name="prev" />
+                      <span>Previous key moment</span>
                     </button>
                     <span className="hint">
                       {keyPosition >= 0 ? `${keyPosition + 1} of ${keyIndexes.length}` : `${keyIndexes.length} key moments`}
                     </span>
                     <button onClick={() => stepKeyMoment(1)} disabled={keyPosition === keyIndexes.length - 1}>
-                      Next key moment ▶
+                      <span>Next key moment</span>
+                      <Icon name="next" />
                     </button>
                   </div>
                 )}
@@ -1239,7 +1292,7 @@ export default function App() {
                         {activeCoach.label}
                       </h3>
                       <button onClick={() => setCoachIndex(null)} aria-label="Close coaching notes">
-                        ✕
+                        <Icon name="close" />
                       </button>
                     </div>
                     <p className="hint">Eval {activeCoach.evalChange}</p>

@@ -4,6 +4,7 @@ import { Chess, type Color, type Square } from 'chess.js';
 import { Chessboard, type ChessboardOptions, type PositionDataType } from 'react-chessboard';
 import { playSound, soundForSan } from '../lib/sound';
 import { BOARD_COLORS } from '../lib/styles';
+import { Icon } from './Icon';
 
 /**
  * Practice board. Two modes:
@@ -274,7 +275,7 @@ export function PracticeBoard() {
 
             {error && <p className="error small">{error}</p>}
             <button className="primary" onClick={startRules}>
-              Next: play with the rules →
+              Next: play with the rules <Icon name="next" />
             </button>
           </>
         ) : (
