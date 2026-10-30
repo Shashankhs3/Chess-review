@@ -5,6 +5,7 @@ import { EvalGraph } from './components/EvalGraph';
 import { PracticeBoard } from './components/PracticeBoard';
 import { EngineArrows } from './components/EngineArrows';
 import { OpeningPrep } from './components/OpeningPrep';
+import { OpeningTrainer } from './components/OpeningTrainer';
 import { playSound, setSoundEnabled, soundEnabled, soundForSan } from './lib/sound';
 import { LivePanel } from './components/LivePanel';
 import {
@@ -174,7 +175,7 @@ export default function App() {
   const batchRunRef = useRef(0);
   const runRef = useRef(0);
   const boardRowRef = useRef<HTMLDivElement>(null);
-  const [view, setView] = useState<'review' | 'practice' | 'prep'>('review');
+  const [view, setView] = useState<'review' | 'practice' | 'prep' | 'train'>('review');
   const [boardPx, setBoardPx] = useState(360);
 
   useEffect(() => {
@@ -841,6 +842,18 @@ export default function App() {
     );
   }
 
+  if (view === 'train') {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <h1>Opening trainer</h1>
+          <button onClick={() => setView('review')}>← Back to review</button>
+        </header>
+        <OpeningTrainer />
+      </div>
+    );
+  }
+
   if (view === 'practice') {
     return (
       <div className="app">
@@ -862,6 +875,9 @@ export default function App() {
         </button>
         <button onClick={() => setView('prep')} title="Prepare an opening as White or Black, against real games">
           Opening prep
+        </button>
+        <button onClick={() => setView('train')} title="Drill opening lines with spaced repetition">
+          Opening trainer
         </button>
         <button onClick={toggleSound} aria-pressed={soundOn} aria-label={soundOn ? 'Mute move sounds' : 'Turn on move sounds'}>
           {soundOn ? '🔊 Sound on' : '🔇 Sound off'}

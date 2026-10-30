@@ -107,3 +107,13 @@ Known differences from chess.com (checked on one game, professorllama vs b3yond_
   using another browser or device, removes them.
 - **Speed:** analysis now spreads positions over several Stockfish workers, and the Fast preset
   is depth 12 (was 10). Standard is depth 16 and Deep is depth 20. Time per game depends on your CPU.
+
+## Opening trainer
+
+Drill opening lines the way the popular repertoire trainers do (Chessdriller, En Croissant, Listudy): spaced repetition.
+
+- Choose a line from the Sicilian repertoire, from the lines you saved in Opening prep, or search any opening by name or ECO.
+- The opponent's moves are played for you; you find yours, by dragging or by clicking a piece and then a dot.
+- A wrong move is rejected with feedback. After two wrong tries, or on Hint, the book move is shown on the board.
+- A clean run moves the line up a box (due again in 1, 3, 7, 14, then 30 days). A run with slips moves it down, so it returns sooner.
+- Progress is kept in this browser only.
