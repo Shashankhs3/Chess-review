@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Chess, type Color, type Square } from 'chess.js';
 import { Chessboard, type ChessboardOptions } from 'react-chessboard';
 import { uciToSan } from '../lib/analysis';
@@ -13,6 +13,7 @@ import {
   type Library,
   type LibraryMove,
 } from '../lib/openinglibrary';
+import { hintStyles, legalTargets } from '../lib/dots';
 import { BOARD_COLORS } from '../lib/styles';
 import { playSound, soundForSan } from '../lib/sound';
 import { EngineArrows, type OverlayArrow } from './EngineArrows';
@@ -131,6 +132,8 @@ export function OpeningPrep() {
   const [saved, setSaved] = useState<SavedLine[]>(() => loadSaved());
   const [showTraps, setShowTraps] = useState(false);
   const [live, setLive] = useState<{ fen: string; lines: LiveLine[] }>({ fen: '', lines: [] });
+  // The piece picked up by a click, tagged with its position so it clears when the board changes.
+  const [pick, setPick] = useState<{ fen: string; square: string } | null>(null);
   const botTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // The position on the board, and the moves that led to it.
@@ -173,6 +176,24 @@ export function OpeningPrep() {
   const yourTurn = started && board.turn() === side && !board.isGameOver();
   const onPreparedLine = path.every((uci, i) => prepared[i] === uci);
   const expectedUci = prepared[path.length];
+
+  // You can move a piece of the side to move, and both sides once the statistics have run out.
+  const movableFrom = (square: string): boolean => {
+    const piece = board.get(square as Square);
+    if (!started || board.isGameOver() || !piece || piece.color !== board.turn()) return false;
+    return board.turn() === side || current.open === true;
+  };
+  const pickedSquare = pick && pick.fen === fen ? pick.square : null;
+
+  // Click-to-move dots: the picked piece is highlighted, and each square it can reach is marked.
+  const moveStyles = useMemo(() => {
+    const styles: Record<string, CSSProperties> = {};
+    if (pickedSquare) styles[pickedSquare] = { backgroundColor: 'rgba(120, 170, 255, 0.55)' };
+    for (const [target, hint] of Object.entries(hintStyles(fen, pickedSquare))) {
+      styles[target] = { ...styles[target], ...hint };
+    }
+    return styles;
+  }, [fen, pickedSquare]);
 
   // The engine's lines only count for the position on the board; older lines are ignored.
   const liveLines = useMemo(() => (live.fen === fen ? live.lines : []), [live, fen]);
@@ -235,12 +256,18 @@ export function OpeningPrep() {
       let source = '';
       let trapText: string | null = null;
 
-      const preparedNext = line[last.path.length];
-      if (preparedNext) {
-        san = playUci(position, preparedNext);
+      // The main line first, then any saved variation for this side that runs through this position.
+      const variations = [line, ...saved.filter((s) => s.side === mySide).map((s) => s.path)];
+      for (const variation of variations) {
+        const depth = last.path.length;
+        const sharesPath = variation.slice(0, depth).every((m, i) => m === last.path[i]);
+        const next = variation[depth];
+        if (!sharesPath || !next) continue;
+        san = playUci(position, next);
         if (san) {
-          uci = preparedNext;
-          source = 'prepared line';
+          uci = next;
+          source = variation === line ? 'prepared line' : 'saved variation';
+          break;
         }
       }
 
@@ -438,7 +465,17 @@ export function OpeningPrep() {
     animationDurationInMs: 120,
     lightSquareStyle: { backgroundColor: BOARD_COLORS.light },
     darkSquareStyle: { backgroundColor: BOARD_COLORS.dark },
+    squareStyles: moveStyles,
     onPieceDrop: ({ sourceSquare, targetSquare }) => (targetSquare ? playerMove(sourceSquare, targetSquare) : false),
+    onSquareClick: ({ square }) => {
+      // Click a dot to play the picked piece there; otherwise click a piece to pick it up.
+      if (pickedSquare && legalTargets(fen, pickedSquare).some((t) => t.to === square)) {
+        playerMove(pickedSquare, square);
+        setPick(null);
+        return;
+      }
+      setPick(movableFrom(square) && square !== pickedSquare ? { fen, square } : null);
+    },
   };
 
   /** Move notation: "1. e4 e5 2. Nf3 …", each move clickable. */
