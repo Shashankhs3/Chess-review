@@ -611,11 +611,10 @@ export function OpeningPrep() {
           )}
         </section>
 
-        {started && (
-          <div className="sec-engine">
-            <LivePanel fen={fen} onLines={handleLive} />
-          </div>
-        )}
+        {/* Shown from the start, so the engine is ready before you pick an opening. */}
+        <div className="sec-engine">
+          <LivePanel fen={fen} onLines={handleLive} />
+        </div>
 
         <section className="card sec-open">
           <h3>Your side and opening</h3>

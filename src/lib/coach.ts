@@ -7,7 +7,7 @@ import {
   type Classification,
   type GameAnalysis,
 } from './analysis';
-import { hangingPieces, PIECE_NAME, PIECE_VALUE, uciMove } from './board';
+import { hangingPieces, netCaptureGain, PIECE_NAME, PIECE_VALUE, uciMove } from './board';
 import { MATE_CP } from './engine';
 
 /** Plain-language reasons a move is good, based on the position it's played in. */
@@ -30,7 +30,14 @@ export function reasonsFor(fenBefore: string, uci: string): { move: Move | null;
   if (board.isCheckmate()) reasons.push('Checkmates the opponent.');
   else if (board.inCheck()) reasons.push('Gives check, so the opponent has to respond.');
 
-  if (move.captured) reasons.push(`Wins a ${PIECE_NAME[move.captured]} (worth ${PIECE_VALUE[move.captured]}).`);
+  if (move.captured) {
+    const captured = `${PIECE_NAME[move.captured]} (worth ${PIECE_VALUE[move.captured]})`;
+    const net = netCaptureGain(board, move);
+    if (net === PIECE_VALUE[move.captured]) reasons.push(`Wins a ${captured}.`);
+    else if (net > 0) reasons.push(`Takes a ${captured}, and the ${PIECE_NAME[move.piece]} can be recaptured: a net gain of ${net}.`);
+    else if (net === 0) reasons.push(`Trades a ${PIECE_NAME[move.piece]} for a ${captured}: an even trade, no material gained.`);
+    else reasons.push(`Takes a ${captured}, but the ${PIECE_NAME[move.piece]} is lost: ${-net} points down.`);
+  }
   if (move.promotion) reasons.push(`Promotes to a ${PIECE_NAME[move.promotion]}.`);
   if (move.flags.includes('k') || move.flags.includes('q')) {
     reasons.push('Castles, getting the king to safety and connecting the rooks.');
@@ -127,6 +134,17 @@ export type MoveCoaching = {
 
 const sideName = (side: Color) => (side === 'w' ? 'White' : 'Black');
 
+/** Whether a move wins material on balance, after one recapture (see netCaptureGain). */
+function bestWinsMaterial(fen: string, uci: string): boolean {
+  const board = new Chess(fen);
+  try {
+    const move = board.move(uciMove(uci));
+    return netCaptureGain(board, move) > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** Builds the coaching notes for one move of the analysed game, for either side. */
 export function coachMove(analysis: GameAnalysis, index: number, userColor: Color | null): MoveCoaching {
   const move = analysis.moves[index];
@@ -157,7 +175,7 @@ export function coachMove(analysis: GameAnalysis, index: number, userColor: Colo
       const replyMove = replyBoard.move(uciMove(reply));
       if (replyBoard.isCheckmate()) {
         whatWentWrong.push(`It allows checkmate: ${sideName(opponent)} answers ${replySan}#.`);
-      } else if (replyMove.captured) {
+      } else if (replyMove.captured && netCaptureGain(replyBoard, replyMove) > 0) {
         whatWentWrong.push(
           `${sideName(opponent)}'s best answer ${replySan} wins ${sideName(mover)}'s ${PIECE_NAME[replyMove.captured]} (worth ${PIECE_VALUE[replyMove.captured]}).`,
         );
@@ -189,7 +207,9 @@ export function coachMove(analysis: GameAnalysis, index: number, userColor: Colo
   if (move.classification === 'blunder' && moverWin(analysis.evals[index], mover) >= 65 && moverWin(analysis.evals[index + 1], mover) < 50) {
     highlights.push('This turned a winning position into an equal or losing one.');
   }
-  if (move.missedTactic && bestSan) {
+  // A missed tactic needs the best move to win material, not just trade pieces.
+  const bestGains = bestUci ? bestWinsMaterial(fenBefore, bestUci) : false;
+  if (move.missedTactic && bestSan && bestGains) {
     highlights.push(`Missed tactic: ${bestSan} — ${bestReasons.reasons[0]}`);
   }
 

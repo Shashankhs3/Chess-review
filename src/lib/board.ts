@@ -1,4 +1,4 @@
-import type { Chess, Color, PieceSymbol, Square } from 'chess.js';
+import type { Chess, Color, Move, PieceSymbol, Square } from 'chess.js';
 
 export const PIECE_NAME: Record<PieceSymbol, string> = {
   p: 'pawn',
@@ -25,6 +25,19 @@ export function hangingPieces(board: Chess, color: Color): Hanging[] {
       const defended = board.isAttacked(cell.square, color);
       return attacked && !defended ? [{ square: cell.square, piece: cell.type }] : [];
     });
+}
+
+/**
+ * Material the mover gains from a capture, looking one recapture ahead. If the capturing piece
+ * lands on a square the opponent still attacks, it can be recaptured, so only the difference counts.
+ * `after` is the board once `move` has been played. Returns 0 for a move that captures nothing.
+ */
+export function netCaptureGain(after: Chess, move: Move): number {
+  if (!move.captured) return 0;
+  const opponent: Color = move.color === 'w' ? 'b' : 'w';
+  const captured = PIECE_VALUE[move.captured];
+  if (!after.isAttacked(move.to, opponent)) return captured;
+  return captured - PIECE_VALUE[move.piece];
 }
 
 /** Splits a UCI move ("e2e4", "e7e8q") into the object chess.js expects. */
