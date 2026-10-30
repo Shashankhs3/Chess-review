@@ -15,13 +15,19 @@
 
 /* ---------- Top bar ---------- */
 
+/* The header is its own bar: white, softly rounded, with a hairline and a light shadow. */
 .topbar {
   flex: none;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 16px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding: 8px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
 }
 
 .topbar h1 {
@@ -29,6 +35,80 @@
   color: var(--text-strong);
   font-size: 1.25rem;
   white-space: nowrap;
+}
+
+/* Brand and section switcher on the left; sound, live engine and the user grouped at the right. */
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.seg .nav-tile {
+  min-height: 34px;
+  padding: 6px 11px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.seg .nav-tile:hover:not(:disabled) {
+  color: var(--text-strong);
+}
+
+.seg .nav-tile.on {
+  background: var(--panel);
+  color: var(--text-strong);
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+
+.seg .icon {
+  display: none;
+}
+
+/* Prep, trainer and practice keep a title and a back button, spread across the same bar. */
+.topbar:has(> h1) {
+  justify-content: space-between;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.header-live,
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+.sound-toggle {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--panel);
 }
 
 /* One row: username, months, depth and the button stay aligned. The whole form wraps to its own line when the bar is full. */
@@ -112,7 +192,7 @@ button:disabled {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr) minmax(280px, 330px);
+  grid-template-columns: 270px minmax(0, 1fr) minmax(280px, 330px);
   gap: 12px;
 }
 
@@ -1323,10 +1403,16 @@ button.link {
 /* Desktop: the phone-only pieces stay hidden. Tab icons are kept for the phone bottom bar only,
    because the desktop side panel is too narrow for four icon-and-label tabs. */
 .tagline,
-.load-title,
 .game-head,
 .tab .icon {
   display: none;
+}
+
+.load-title {
+  display: block;
+  margin: 0 0 2px;
+  color: var(--text-strong);
+  font-size: 0.95rem;
 }
 
 /* ---------- Phones: home, game screen, bottom navigation (max 700px) ---------- */
@@ -1348,9 +1434,35 @@ button.link {
     gap: 10px;
     align-items: center;
     margin-bottom: 14px;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* The switcher and the right-hand group dissolve, so their buttons become tiles in the grid. */
+  .seg,
+  .header-right {
+    display: contents;
+  }
+
+  .seg .seg-review,
+  .header-live,
+  .user-chip {
+    display: none;
+  }
+
+  .seg .nav-tile {
+    order: 2;
+  }
+
+  .seg .nav-tile:last-child {
+    order: 1;
   }
 
   .brand {
+    display: block;
     grid-column: 1 / span 2;
   }
 
@@ -1377,7 +1489,7 @@ button.link {
     display: none;
   }
 
-  .nav-tile {
+  .seg .nav-tile {
     flex-direction: column;
     gap: 6px;
     min-height: 76px;
@@ -1393,7 +1505,8 @@ button.link {
     text-align: center;
   }
 
-  .nav-tile .icon {
+  .seg .nav-tile .icon {
+    display: block;
     color: var(--accent);
   }
 
@@ -1576,7 +1689,10 @@ button.link {
     margin: -12px -16px 12px;
     padding: 10px 16px;
     background: var(--bg);
+    border: none;
     border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .topbar:has(> h1) h1 {
@@ -1585,6 +1701,62 @@ button.link {
 
   .back-btn {
     min-height: 44px;
+  }
+
+  /* Phone game screen: live engine above the board, then the board, controls, coaching strip and
+     the tab content. The centre and side columns are flattened so their items can be ordered. */
+  .app.has-game .center,
+  .app.has-game .side {
+    display: contents;
+  }
+
+  .app.has-game .live-switch {
+    display: flex;
+  }
+
+  .app.has-game .game-head { order: 0; }
+  .app.has-game .live-wrap { order: 1; }
+  .app.has-game .board-row { order: 2; }
+  .app.has-game .controls { order: 3; }
+  .app.has-game .variation-bar { order: 4; }
+  .app.has-game .opening { order: 5; }
+  .app.has-game .eval-graph { order: 6; }
+  .app.has-game .progress { order: 7; }
+  .app.has-game .error { order: 8; }
+  .app.has-game .coach-strip { order: 9; }
+  .app.has-game .tab-body { order: 10; }
+
+  /* Engine lines: one line each, no heading or best-move line, so the section stays short. */
+  .app.has-game .live { padding: 10px 12px; }
+  .app.has-game .live-head,
+  .app.has-game .live-best,
+  .app.has-game .live .hint.small {
+    display: none;
+  }
+  .app.has-game .live-lines { margin: 0; }
+  .app.has-game .live-lines li { margin-bottom: 3px; }
+  .app.has-game .live .pv { -webkit-line-clamp: 1; }
+
+  /* The Engine tab is replaced by the lines above; the summary shows until a tab is picked. */
+  .app.has-game .tabs .tab:first-child {
+    display: none;
+  }
+
+  .app.has-game .coach-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: none;
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    color: var(--text-strong);
+    font-size: 0.85rem;
+    text-align: left;
   }
 
   /* Touch targets: at least 44px tall on phones, including the prep board and search fields. */
@@ -1602,4 +1774,282 @@ button.link {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* ---------- Live engine switch and coaching strip (desktop defaults; the phone rules above take over) ---------- */
+
+.live-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* On desktop the switch lives in the header; phones show it above the engine lines. */
+.live-switch {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.switch {
+  flex: none;
+  position: relative;
+  width: 42px;
+  height: 24px;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow);
+  transition: left 0.15s ease;
+}
+
+.switch.on {
+  background: var(--accent);
+}
+
+.switch.on::after {
+  left: 21px;
+}
+
+/* Coaching strip: phones only (the phone rules above show it). Desktop gives that height to the board. */
+.coach-strip {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+  align-self: center;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: none;
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  color: var(--text-strong);
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+/* The load form lives at the top of the game list (left rail), on desktop and phones alike. */
+.game-list .load-form {
+  flex: none;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.game-list .load-form input,
+.game-list .load-form select {
+  width: 100%;
+}
+
+.game-list .load-form button[type='submit'] {
+  width: 100%;
+  min-width: 0;
+}
+
+.game-list .recent {
+  margin: 0 0 4px;
+}
+
+.coach-strip-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Soft shapes and separation (desktop and phone) ---------- */
+
+button,
+input,
+select {
+  border-radius: 10px;
+}
+
+.card {
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+
+/* The load form is its own section at the top of the rail, with a divider under it. */
+.game-list {
+  gap: 8px;
+}
+
+.game-list .load-form {
+  padding: 0 0 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.game-list .load-form input,
+.game-list .load-form select {
+  flex: none;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 10px;
+}
+
+.game-list .load-form button[type='submit'] {
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+.game-list .recent {
+  margin-bottom: 0;
+}
+
+/* Game cards read as separate objects: a soft tile per game, with the selected one tinted. */
+.game-list .game-card {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.game-list .game-card.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.game-list .batch {
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* The evaluation graph sits in the right panel, above the tabs. */
+.side .eval-graph {
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Landing view (wide screens, no game open): the load form fills the centre ---------- */
+
+.landing {
+  display: none;
+}
+
+@media (min-width: 1001px) {
+  .landing {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 24px;
+  }
+
+  /* Until a game opens, the form lives in the centre; the rail starts with the games. */
+  .app:not(.has-game) .game-list .load-form,
+  .app:not(.has-game) .game-list .recent {
+    display: none;
+  }
+}
+
+.landing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  padding: 28px;
+  background: var(--panel);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.landing-card h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1.5rem;
+}
+
+.landing-card > p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.landing .load-title {
+  display: none;
+}
+
+.landing .load-form {
+  flex: none;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.landing .load-form input,
+.landing .load-form select {
+  flex: none;
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.landing .load-form button[type='submit'] {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 1rem;
+}
+
+.landing .recent {
+  margin: 0;
+}
+
+.landing-hint {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.landing-points {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing-points li {
+  padding: 6px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.85rem;
 }

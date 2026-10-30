@@ -83,6 +83,17 @@ type TabId = 'engine' | 'moves' | 'coach' | 'stats';
 
 const TAB_ICON: Record<TabId, IconName> = { engine: 'engine', moves: 'moves', coach: 'coach', stats: 'stats' };
 
+/** The live engine's on/off choice, kept on this device. Defaults to on. */
+const LIVE_KEY = 'chess-review.live-engine.v1';
+
+function loadLiveOn(): boolean {
+  try {
+    return localStorage.getItem(LIVE_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
 type BatchProgress = { done: number; total: number; label: string };
 
 function messageOf(error: unknown): string {
@@ -173,6 +184,7 @@ export default function App() {
   const [coachIndex, setCoachIndex] = useState<number | null>(null);
   const [showAllMoments, setShowAllMoments] = useState(false);
   const [tab, setTab] = useState<TabId>('engine');
+  const [liveOn, setLiveOn] = useState(loadLiveOn);
 
   const enginesRef = useRef<StockfishEngine[] | null>(null);
   const batchRunRef = useRef(0);
@@ -203,7 +215,9 @@ export default function App() {
       const width = row.clientWidth - EVAL_BAR_AND_GAP;
       const height = row.clientHeight;
       // Phones stack the page, so the row's height depends on the board itself.
-      const side = window.innerWidth <= 1000 ? Math.min(width, 560) : Math.min(width, height);
+      // Phones get a board capped at 270px, so the engine lines, controls and coaching fit around it.
+      const side =
+        window.innerWidth <= 700 ? Math.min(width, 270) : window.innerWidth <= 1000 ? Math.min(width, 560) : Math.min(width, height);
       setBoardPx(Math.max(200, Math.floor(side)));
     };
     fit();
@@ -570,6 +584,23 @@ export default function App() {
     void loadUser(username);
   }
 
+  function toggleLive() {
+    const next = !liveOn;
+    setLiveOn(next);
+    try {
+      localStorage.setItem(LIVE_KEY, next ? 'on' : 'off');
+    } catch {
+      // Storage can be blocked; the choice then lasts for this visit only.
+    }
+    if (!next) setLive({ fen: '', lines: [] });
+  }
+
+  /** On phones, tapping the open tab again closes it and returns to the summary. */
+  function pickTab(id: TabId) {
+    const phone = window.matchMedia('(max-width: 700px)').matches;
+    setTab(phone && tab === id ? 'engine' : id);
+  }
+
   /** Leaves the game screen (phones) and returns to the game list. */
   function closeGame() {
     setAutoPlay(false);
@@ -839,6 +870,55 @@ export default function App() {
     ? `Game · move ${cursor.ply} of ${mainMoves.length}`
     : `Variation (${lineMoves(cursor.line).length} move${lineMoves(cursor.line).length === 1 ? '' : 's'})`;
 
+  // The move just played, explained in one line on phones (the coaching strip above the tabs).
+  const stripCoach =
+    analysis && onMain && cursor.ply > 0 && cursor.ply <= analysis.moves.length
+      ? coachMove(analysis, cursor.ply - 1, userColor)
+      : null;
+
+  // The load form and recent searches. On wide screens they are the landing view in the centre
+  // until a game opens, then sit at the top of the left rail; phones always show them in the list.
+  const loadBlock = (
+    <>
+      <form className="load-form" onSubmit={handleLoad}>
+        <h2 className="load-title">Load your games</h2>
+        <input
+          placeholder="chess.com username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          aria-label="chess.com username"
+        />
+        <select value={months} onChange={(e) => setMonths(Number(e.target.value))} aria-label="Months to load">
+          {[1, 2, 3, 6].map((m) => (
+            <option key={m} value={m}>
+              Last {m} month{m > 1 ? 's' : ''}
+            </option>
+          ))}
+        </select>
+        <select value={depth} onChange={(e) => setDepth(Number(e.target.value))} aria-label="Engine depth">
+          {DEPTH_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <button type="submit" disabled={loadingGames || !username.trim()}>
+          {loadingGames ? 'Loading…' : 'Load games'}
+        </button>
+      </form>
+      {recentUsers.length > 0 && (
+        <div className="recent" aria-label="Recent searches">
+          <span className="hint">Recent:</span>
+          {recentUsers.map((name) => (
+            <button key={name} className="chip" onClick={() => void loadUser(name)} disabled={loadingGames}>
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
   if (view === 'prep') {
     return (
       <div className="app">
@@ -891,67 +971,50 @@ export default function App() {
           <h1>Chess Review</h1>
           <p className="tagline">Improve your game with data</p>
         </div>
-        <button onClick={() => setView('practice')} title="Free moves, set up positions, then play with the rules" className="nav-tile">
-          <Icon name="practice" />
-          <span>Practice board</span>
-        </button>
-        <button onClick={() => setView('prep')} title="Prepare an opening as White or Black, against real games" className="nav-tile">
-          <Icon name="book" />
-          <span>Opening prep</span>
-        </button>
-        <button onClick={() => setView('train')} title="Drill opening lines with spaced repetition" className="nav-tile">
-          <Icon name="trainer" />
-          <span>Opening trainer</span>
-        </button>
-        <button
-          onClick={toggleSound}
-          aria-pressed={soundOn}
-          aria-label={soundOn ? 'Mute move sounds' : 'Turn on move sounds'}
-          className="sound-toggle"
-        >
-          <Icon name={soundOn ? 'sound-on' : 'sound-off'} />
-          <span>{soundOn ? 'Sound on' : 'Sound off'}</span>
-        </button>
-        <form className="load-form" onSubmit={handleLoad}>
-          <h2 className="load-title">Load your games</h2>
-          <input
-            placeholder="chess.com username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            aria-label="chess.com username"
-          />
-          <select value={months} onChange={(e) => setMonths(Number(e.target.value))} aria-label="Months to load">
-            {[1, 2, 3, 6].map((m) => (
-              <option key={m} value={m}>
-                Last {m} month{m > 1 ? 's' : ''}
-              </option>
-            ))}
-          </select>
-          <select value={depth} onChange={(e) => setDepth(Number(e.target.value))} aria-label="Engine depth">
-            {DEPTH_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <button type="submit" disabled={loadingGames || !username.trim()}>
-            {loadingGames ? 'Loading…' : 'Load games'}
+        <nav className="seg" aria-label="Sections">
+          <button className="nav-tile seg-review on" aria-current="page" onClick={() => setView('review')}>
+            <span>Review</span>
           </button>
-        </form>
-        {recentUsers.length > 0 && (
-          <div className="recent" aria-label="Recent searches">
-            <span className="hint">Recent:</span>
-            {recentUsers.map((name) => (
-              <button key={name} className="chip" onClick={() => void loadUser(name)} disabled={loadingGames}>
-                {name}
-              </button>
-            ))}
-          </div>
-        )}
+          <button onClick={() => setView('prep')} title="Prepare an opening as White or Black, against real games" className="nav-tile">
+            <Icon name="book" />
+            <span>Opening prep</span>
+          </button>
+          <button onClick={() => setView('train')} title="Drill opening lines with spaced repetition" className="nav-tile">
+            <Icon name="trainer" />
+            <span>Opening trainer</span>
+          </button>
+          <button onClick={() => setView('practice')} title="Free moves, set up positions, then play with the rules" className="nav-tile">
+            <Icon name="practice" />
+            <span>Practice board</span>
+          </button>
+        </nav>
+        <div className="header-right">
+          <button
+            onClick={toggleSound}
+            aria-pressed={soundOn}
+            aria-label={soundOn ? 'Mute move sounds' : 'Turn on move sounds'}
+            className="sound-toggle"
+          >
+            <Icon name={soundOn ? 'sound-on' : 'sound-off'} />
+            <span>{soundOn ? 'Sound on' : 'Sound off'}</span>
+          </button>
+          <span className="header-live">
+            <span>Live engine</span>
+            <button
+              className={`switch ${liveOn ? 'on' : ''}`}
+              role="switch"
+              aria-checked={liveOn}
+              aria-label="Live engine"
+              onClick={toggleLive}
+            />
+          </span>
+          {loadedUser && <span className="user-chip">{loadedUser}</span>}
+        </div>
       </header>
 
       <div className="workspace">
         <aside className="card game-list">
+          {loadBlock}
           <div className="batch">
             <p className="hint small">Analyse your last games and keep them for the Stats tab (on this device).</p>
             <div className="batch-buttons">
@@ -1028,7 +1091,21 @@ export default function App() {
 
         <main className="center">
           {!selected ? (
-            <p className="hint center-hint">{games && games.length > 0 ? 'Pick a game to analyse.' : ''}</p>
+            <div className="landing">
+              <div className="landing-card">
+                <h2>Review your chess.com games</h2>
+                <p>Load a player to see every move rated by Stockfish, with coaching notes. The analysis runs on this device.</p>
+                {loadBlock}
+                {games && games.length > 0 && (
+                  <p className="landing-hint">{games.length} games loaded. Pick one from the list on the left to start.</p>
+                )}
+              </div>
+              <ul className="landing-points">
+                <li>Move-by-move review</li>
+                <li>Coaching notes</li>
+                <li>Opening prep and trainer</li>
+              </ul>
+            </div>
           ) : (
             <>
               <div className="board-row" ref={boardRowRef}>
@@ -1079,8 +1156,6 @@ export default function App() {
                 </p>
               )}
 
-              {analysis && <EvalGraph analysis={analysis} ply={onMain ? cursor.ply : -1} onSelect={(p) => setCursor({ line: 'main', ply: p })} />}
-
               {progress && (
                 <div className="progress">
                   <div className="progress-fill" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
@@ -1090,12 +1165,43 @@ export default function App() {
                 </div>
               )}
               {analysisError && <p className="error">{analysisError}</p>}
+
+              {stripCoach && (
+                <button className="coach-strip" onClick={() => showCoaching(stripCoach.index)}>
+                  <span className="coach-tag" style={{ background: COLORS[stripCoach.classification] }}>
+                    {LABELS[stripCoach.classification]}
+                  </span>
+                  <span className="coach-strip-text">
+                    {stripCoach.label} ·{' '}
+                    {stripCoach.whatWentWrong[0] ??
+                      stripCoach.highlights[0] ??
+                      (stripCoach.better ? `Engine prefers ${stripCoach.better.san}` : `Eval ${stripCoach.evalChange}`)}
+                  </span>
+                  <span aria-hidden="true">›</span>
+                </button>
+              )}
             </>
           )}
         </main>
 
         <aside className="side">
-          {selected && <LivePanel fen={fen} onLines={handleLiveLines} />}
+          {selected && (
+            <div className="live-wrap">
+              <div className="live-switch">
+                <span>Live engine</span>
+                <button
+                  className={`switch ${liveOn ? 'on' : ''}`}
+                  role="switch"
+                  aria-checked={liveOn}
+                  aria-label="Live engine"
+                  onClick={toggleLive}
+                />
+              </div>
+              {liveOn && <LivePanel fen={fen} onLines={handleLiveLines} />}
+            </div>
+          )}
+
+          {analysis && <EvalGraph analysis={analysis} ply={onMain ? cursor.ply : -1} onSelect={(p) => setCursor({ line: 'main', ply: p })} />}
 
           <div className="tabs" role="tablist">
             {(
@@ -1111,7 +1217,7 @@ export default function App() {
                 role="tab"
                 aria-selected={tab === id}
                 className={`tab ${tab === id ? 'active' : ''}`}
-                onClick={() => setTab(id)}
+                onClick={() => pickTab(id)}
               >
                 <Icon name={TAB_ICON[id]} />
                 <span>{label}</span>
