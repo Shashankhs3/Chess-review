@@ -174,6 +174,7 @@ export default function App() {
   const batchRunRef = useRef(0);
   const runRef = useRef(0);
   const boardRowRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState<'review' | 'practice' | 'prep'>('review');
   const [boardPx, setBoardPx] = useState(360);
 
   useEffect(() => {
@@ -205,7 +206,8 @@ export default function App() {
     const observer = new ResizeObserver(fit);
     observer.observe(row);
     return () => observer.disconnect();
-  }, [selected]);
+    // Re-measure when returning from the practice or prep views, where the board row is not mounted.
+  }, [selected, view]);
 
   // ----- Lines: the game's main line and any variations the user has made -----
 
@@ -814,7 +816,6 @@ export default function App() {
     );
   }
 
-  const [view, setView] = useState<'review' | 'practice' | 'prep'>('review');
   const [soundOn, setSoundOn] = useState(() => soundEnabled());
 
   function toggleSound() {
